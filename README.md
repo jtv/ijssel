@@ -9,14 +9,30 @@ style.
 
 In standard Python you might write:
 
-    big_counts = filter(greater_than_10, map(count, items))
+    greater_than_10 = lambda value: value > 10
+    big_counts = list(filter(greater_than_10, map(count, items)))
 
-But some prefer something more like:
+But some prefer it more like:
 
-    big_counts = Streamless(items).map(count).filter(greater_than_10)
+    greater_than = lambda value, threshold: value > threshold
+    big_counts = (
+        Streamless(items)
+        .map(count)
+        .filter(greater_than, {'threshold': 10})
+        .list()
+        )
+
+A Streamless stream can iterate anything that you can iterate: ranges, lists,
+sets, strings...  Methods that return a sequence also return Streamless
+streams.
 
 
-Python versions
----------------
+Platform
+--------
 
 Works in Python 2.7, 3.6, and pypy.  This will evolve.
+
+Should work on any operating system, as long as it's running a supported Python
+version.
+
+External dependencies: minimal.  It'll probably require `six` at some point.
