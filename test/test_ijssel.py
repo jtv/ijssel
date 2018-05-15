@@ -623,3 +623,15 @@ class TestPartition(TestCase):
                 1 * factor: [1],
                 2 * factor: [2],
             })
+
+    def test_computes_value(self):
+        factor = randint(1, 10)
+        multiply = lambda item, factor: item * factor
+        stream = Stream(range(3))
+        self.assertEqual(
+            stream.partition(value=multiply, val_kwargs={'factor': factor}),
+            {
+                0: [0],
+                1: [factor],
+                2: [2 * factor],
+            })
