@@ -6,4 +6,4 @@ from __future__ import (
     unicode_literals,
     )
 
-from .main import Streamless
+from .main import Stream

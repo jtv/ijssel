@@ -11,7 +11,7 @@ __metaclass__ = type
 from random import randint
 from unittest import TestCase
 
-from ..streamless.util import (
+from ..ijssel.util import (
     bind_kwargs,
     identity,
     ifilter,

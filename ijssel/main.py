@@ -8,7 +8,7 @@ from __future__ import (
 
 __metaclass__ = type
 __all__ = [
-    'Streamless',
+    'Stream',
     ]
 
 import functools
@@ -26,11 +26,12 @@ from .util import (
     )
 
 
-class Streamless:
+# TODO: What happens to original when you iterate a modified stream?
+class Stream:
     """Stream class.
 
     Lets you iterate and aggregate over anything that's iterable, using a
-    "fluent" interface.  Any Streamless object wraps a sequence of items.
+    "fluent" interface.  Any Stream object wraps a sequence of items.
 
     Streams are iterated lazily except where specified.  That means that there
     are many things you can safely do on infinite streams, or recover from
@@ -119,34 +120,34 @@ class Streamless:
 
     def filter(self, criterion=identity, kwargs=None):
         """Drop any items for which criterion(item) is not true."""
-        return Streamless(ifilter(bind_kwargs(criterion, kwargs), self.iterable))
+        return Stream(ifilter(bind_kwargs(criterion, kwargs), self.iterable))
 
     def filter_out(self, criterion=identity, kwargs=None):
         """Drop any items for which criterion(item) is true."""
         call = bind_kwargs(criterion, kwargs)
-        return Streamless(item for item in self.iterable if not call(item))
+        return Stream(item for item in self.iterable if not call(item))
 
     def map(self, function, kwargs=None):
         """Transform stream: apply function to each item."""
-        return Streamless(imap(bind_kwargs(function, kwargs), self.iterable))
+        return Stream(imap(bind_kwargs(function, kwargs), self.iterable))
 
     def limit(self, limit):
         """Iterate only the first limit items."""
-        return Streamless(head(self.iterable, limit))
+        return Stream(head(self.iterable, limit))
 
     def until_value(self, sentinel):
         """Iterate items until an item equals sentinel."""
-        return Streamless(
+        return Stream(
             scan_until(self.iterable, lambda item: item == sentinel))
 
     def until_identity(self, sentinel):
         """Iterate items until until an item is the sentinel object."""
-        return Streamless(
+        return Stream(
             scan_until(self.iterable, lambda item: item is sentinel))
 
     def until_true(self, criterion, kwargs=None):
         """Stop iterating when criterion(item) is true."""
-        return Streamless(
+        return Stream(
             scan_until(self.iterable, bind_kwargs(criterion, kwargs)))
 
     def while_true(self, criterion, kwargs=None):
@@ -156,7 +157,7 @@ class Streamless:
 
     def concat(self):
         """Items are themselves sequences.  Iterate them all combined."""
-        return Streamless(chain.from_iterable(self.iterable))
+        return Stream(chain.from_iterable(self.iterable))
 
     def partition(self, key=identity, key_kwargs=None, value=identity,
                   val_kwargs=None):

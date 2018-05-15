@@ -1,5 +1,5 @@
-streamless
-==========
+IJssel
+======
 
 Stream library for Python.
 
@@ -16,15 +16,14 @@ But some prefer it more like:
 
     greater_than = lambda value, threshold: value > threshold
     big_counts = (
-        Streamless(items)
+        Stream(items)
         .map(count)
         .filter(greater_than, {'threshold': 10})
         .list()
         )
 
-A Streamless stream can iterate anything that you can iterate: ranges, lists,
-sets, strings...  Methods that return a sequence also return Streamless
-streams.
+An IJssel stream can iterate anything that you can iterate: ranges, lists,
+sets, strings...  Methods that return a sequence also return IJssel streams.
 
 
 Platform
