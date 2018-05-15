@@ -583,7 +583,7 @@ class TestPartition(TestCase):
             {0: [0], 1: [1], 2: [2]})
 
     def test_partitions_by_key_result(self):
-        half = lambda number: number / 2
+        half = lambda number: int(number / 2)
         self.assertEqual(
             Stream(range(3)).partition(key=half),
             {
@@ -617,7 +617,7 @@ class TestPartition(TestCase):
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
-            stream.partition(key=multiply, key_kwargs={'factor': 2}),
+            stream.partition(key=multiply, key_kwargs={'factor': factor}),
             {
                 0: [0],
                 1 * factor: [1],
