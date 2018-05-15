@@ -635,3 +635,24 @@ class TestPartition(TestCase):
                 1: [factor],
                 2: [2 * factor],
             })
+
+
+class TestSum(TestCase):
+    """Tests for `sum`."""
+    def test_returns_initial_if_empty(self):
+        initial = randint(0, 10)
+        self.assertEqual(Stream().sum(initial), initial)
+
+    def test_sums_numbers(self):
+        self.assertEqual(Stream(range(4)).sum(0), 6)
+
+    def test_sums_strings(self):
+        self.assertEqual(Stream(['foo', 'bar']).sum('go'), 'gofoobar')
+
+    def test_initial_defaults_to_zero(self):
+        self.assertEqual(Stream(range(4)).sum(), 6)
+
+
+class TestReduce(TestCase):
+    """Tests for `reduce`."""
+# XXX: TODO:

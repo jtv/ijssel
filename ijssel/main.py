@@ -180,6 +180,14 @@ class Stream:
             partitioning[item_key].append(item_value)
         return partitioning
 
+    def sum(self, initial=0):
+        """Add up all elements, starting with initial value.
+
+        Consumes all items.
+        """
+        add = lambda l, r: l + r
+        return self.reduce(add, initial=initial)
+
     def reduce(self, function, initial=None, kwargs=None):
         """Use function to combine items.
 
@@ -195,9 +203,6 @@ class Stream:
         return functools.reduce(
             bind_kwargs(function, kwargs), self.iterable, initial)
 
-    def sum(self, initial=0):
-        """Add up all elements, starting with initial value.
-
-        Consumes all items.
-        """
-        return sum(self.iterable, initial)
+# TODO: average, mean?
+# TODO: catch
+# TODO: get
