@@ -735,6 +735,29 @@ class TestReduce(TestCase):
             '0.a.b.c')
 
 
+class TestUniq(TestCase):
+    """Tests for `uniq`."""
+    def test_removes_consecutive_identical_values(self):
+        self.assertEqual(Stream([1, 1, 1]).uniq().list(), [1])
+
+    def test_keeps_nonidentical_items(self):
+        self.assertEqual(Stream([1, 2, 3]).uniq().list(), [1, 2, 3])
+
+    def test_keeps_nonconsecutive_identical_items(self):
+        self.assertEqual(Stream([1, 0, 1]).uniq().list(), [1, 0, 1])
+
+    def test_applies_function(self):
+        half = lambda item: int(item / 2)
+        self.assertEqual(Stream([0, 1, 2, 3, 4]).uniq(half).list(), [0, 2, 4])
+
+    def test_adds_kwargs(self):
+        args = []
+        inputs = [randint(0, 10) for _ in range(10)]
+        arg = randint(0, 10)
+        Stream(inputs).uniq(kwargs_recorder(args), kwargs={'n': arg}).drain()
+        self.assertEqual(args, [{'n': arg}] * len(inputs))
+
+
 class TestPeek(TestCase):
     """Tests for `peek`."""
     def test_calls_function_on_items(self):
@@ -796,3 +819,27 @@ class TestPathJoin(TestCase):
         self.assertRaises(
             (AttributeError, TypeError),
             Stream(['x', None]).path_join)
+
+
+class TestSort(TestCase):
+    """Tests for `sort`."""
+    def test_empty_for_empty_stream(self):
+        self.assertEqual(Stream().sort().list(), [])
+
+    def test_sorts(self):
+        self.assertEqual(
+            Stream([3, 5, 1, 4, 2]).sort().list(),
+            [1, 2, 3, 4, 5])
+
+    def test_sorts_by_key(self):
+        key = lambda item: item % 5
+        self.assertEqual(
+            Stream([10, 4, 12, 26, 8]).sort(key).list(),
+            [10, 26, 12, 8, 4])
+
+    def test_adds_kwargs(self):
+        args = []
+        arg = randint(0, 10)
+        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        Stream(inputs).sort(kwargs_recorder(args), kwargs={'x': arg}).drain()
+        self.assertEqual(args, [{'x': arg}] * len(inputs))

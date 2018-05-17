@@ -23,10 +23,15 @@ from .util import (
     imap,
     negate,
     scan_until,
+    uniq,
     )
 
 
 # TODO: What happens to original when you iterate a modified stream?
+# TODO: What's a good, extensible way to generalise e.g. averages and medians?
+# TODO: Get a single item, get n items?
+# TODO: Version of uniq that doesn't care about consecutiveness?
+
 class Stream:
     """Stream class.
 
@@ -315,6 +320,15 @@ class Stream:
         return functools.reduce(
             bind_kwargs(function, kwargs), self.iterable, initial)
 
+    def uniq(self, key=identity, kwargs=None):
+        """Filter out any consecutive items with equal `key(item)`.
+
+        If `key` returns the same value for two or more consecutive items
+        in the stream, the resulting stream will only contain the first of
+        those items.  The other items with the same key are filtered out.
+        """
+        return Stream(uniq(self, bind_kwargs(key, kwargs)))
+
     def peek(self, function, kwargs=None):
         """Pass on each item unchanged, but also, run function on it.
 
@@ -348,5 +362,15 @@ class Stream:
         """
         return os.path.join(*self)
 
-# TODO: average, mean?
-# TODO: get
+    def sort(self, key=identity, kwargs=None):
+        """Return a sorted version of this stream.
+
+        Reads all items into memory, sorts them, and returns a new Stream
+        which iterates over the sorted items.
+
+        Terminal.
+
+        :param key: Compute key by which elements should be sorted.
+        :return: Stream.
+        """
+        return Stream(sorted(self, key=bind_kwargs(key, kwargs)))

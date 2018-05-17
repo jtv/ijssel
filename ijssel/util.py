@@ -15,6 +15,7 @@ __all__ = [
     'imap',
     'negate',
     'scan_until',
+    'uniq',
     ]
 
 import itertools
@@ -90,3 +91,18 @@ def scan_until(iterable, criterion):
             return
         yield item
         item = next(iterator, sentinel)
+
+
+def uniq(iterable, key):
+    """Iterate over iterable, eliminate values with repeat keys.
+
+    The key is a callable which takes the key as its argument.  If a series of
+    consecutive items return the same key, only the first of those comes out.
+    """
+    # A blank object does not equal anything.
+    last_key = object()
+    for item in iterable:
+        item_key = key(item)
+        if item_key != last_key:
+            last_key = item_key
+            yield item
