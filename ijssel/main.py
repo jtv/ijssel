@@ -200,7 +200,9 @@ class Stream:
         the items which had that key.
 
         Within each key's list, the values stay in the same order in which
-        they occurred in the original stream.
+        they occurred in the original stream.  If the same key/value pair
+        occurs twice, the value will be included twice in the list for that
+        key.
 
         Terminal.
         """
