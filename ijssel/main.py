@@ -79,6 +79,15 @@ class Stream:
     def __iter__(self):
         return iter(self.iterable)
 
+    def _clone(self, iterable):
+        """Create a new instance based on the current one.
+
+        This is here to support subclassing, where existing nonterminal
+        methods when called on a derived class can return an instance of the
+        derived class, rather than of Stream.
+        """
+        return type(self)(iterable)
+
     def list(self):
         """Return all items as a list.
 
@@ -174,7 +183,8 @@ class Stream:
 
         :return: Stream.
         """
-        return Stream(ifilter(bind_kwargs(criterion, kwargs), self.iterable))
+        return self._clone(
+            ifilter(bind_kwargs(criterion, kwargs), self.iterable))
 
     def filter_out(self, criterion=identity, kwargs=None):
         """Drop any items for which criterion(item) is true.
@@ -182,14 +192,15 @@ class Stream:
         :return: Stream.
         """
         call = bind_kwargs(criterion, kwargs)
-        return Stream(item for item in self.iterable if not call(item))
+        return self._clone(
+            item for item in self.iterable if not call(item))
 
     def map(self, function, kwargs=None):
         """Transform stream: apply function to each item.
 
         :return: Stream.
         """
-        return Stream(imap(bind_kwargs(function, kwargs), self.iterable))
+        return self._clone(imap(bind_kwargs(function, kwargs), self.iterable))
 
     def catch(self, function, kwargs=None):
         """Iterate exceptions raised by `function(item)` for each item.
@@ -219,14 +230,14 @@ class Stream:
 
         :return: Stream.
         """
-        return Stream(head(self.iterable, limit))
+        return self._clone(head(self.iterable, limit))
 
     def until_value(self, sentinel):
         """Iterate items until an item equals sentinel.
 
         :return: Stream.
         """
-        return Stream(
+        return self._clone(
             scan_until(self.iterable, lambda item: item == sentinel))
 
     def until_identity(self, sentinel):
@@ -234,7 +245,7 @@ class Stream:
 
         :return: Stream.
         """
-        return Stream(
+        return self._clone(
             scan_until(self.iterable, lambda item: item is sentinel))
 
     def until_true(self, criterion, kwargs=None):
@@ -242,7 +253,7 @@ class Stream:
 
         :return: Stream.
         """
-        return Stream(
+        return self._clone(
             scan_until(self.iterable, bind_kwargs(criterion, kwargs)))
 
     def while_true(self, criterion, kwargs=None):
@@ -258,7 +269,7 @@ class Stream:
 
         :return: Stream.
         """
-        return Stream(chain.from_iterable(self.iterable))
+        return self._clone(chain.from_iterable(self.iterable))
 
     def group(self, key=identity, key_kwargs=None, value=identity,
               val_kwargs=None):
@@ -327,7 +338,7 @@ class Stream:
         in the stream, the resulting stream will only contain the first of
         those items.  The other items with the same key are filtered out.
         """
-        return Stream(uniq(self, bind_kwargs(key, kwargs)))
+        return self._clone(uniq(self, bind_kwargs(key, kwargs)))
 
     def peek(self, function, kwargs=None):
         """Pass on each item unchanged, but also, run function on it.
@@ -373,4 +384,4 @@ class Stream:
         :param key: Compute key by which elements should be sorted.
         :return: Stream.
         """
-        return Stream(sorted(self, key=bind_kwargs(key, kwargs)))
+        return self._clone(sorted(self, key=bind_kwargs(key, kwargs)))
