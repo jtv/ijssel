@@ -8,15 +8,18 @@ from __future__ import (
 
 __metaclass__ = type
 
+import os.path
 from random import randint
 from unittest import TestCase
 
 from ..ijssel import Stream
+from ..ijssel.util import identity
 
 
 # Standard things to test:
 #
 # Method that returns streams -
+#  * Does not consume items without terminal call.
 #  * Propagates exception.
 #  * Stops at exception.
 #  * Does not consume beyond exception.
@@ -29,7 +32,7 @@ from ..ijssel import Stream
 #  * Adds kwargs.
 
 
-def record(sequence, iterations):
+def generate(sequence, iterations):
     """Yield items from sequence, also appending them to iterations.
 
     Use this to test which items a stream actually consumes.  Only those
@@ -38,6 +41,42 @@ def record(sequence, iterations):
     for item in sequence:
         iterations.append(item)
         yield item
+
+
+def recorder(processed_items, function=identity):
+    """Wrap a callable to record processed items.
+
+    Returns a new callable which takes an item as its argument, appends the
+    item to `processed_items`, and returns `function(item)`.
+    """
+    def process(item):
+        processed_items.append(item)
+        return function(item)
+
+    return process
+
+
+def kwargs_recorder(kwargs_list, function=identity, **kwargs):
+    """Wrap a callable to record kwargs passed to function.
+
+    Returns a new callable which takes an item as its argument, plus any
+    keyword arguments.  It appends the dict of keyword arguments to
+    kwargs_list, and returns `function(item)`.
+    """
+    def process(item, **kwargs):
+        kwargs_list.append(kwargs)
+        return function(item)
+
+    return process
+
+
+class SimulatedFailure(Exception):
+    """Deliberate failure for test purposes."""
+
+
+def fail_item(item):
+    """Simulate failure when processing item."""
+    raise SimulatedFailure("Simulated failure for item '%s'." % item)
 
 
 class TestIteration(TestCase):
@@ -62,6 +101,7 @@ class TestIteration(TestCase):
 
     def test_iterates_sequence(self):
         n = randint(1, 10)
+
         def generate():
             for item in range(n):
                 yield item
@@ -77,7 +117,7 @@ class TestIteration(TestCase):
 
     def test_evaluates_lazily(self):
         iterations = []
-        sequence = iter(Stream(record(range(5), iterations)))
+        sequence = iter(Stream(generate(range(5), iterations)))
         self.assertEqual(iterations, [])
         first = next(sequence)
         self.assertEqual(first, 0)
@@ -140,13 +180,13 @@ class TestAll(TestCase):
     def test_consumes_all_if_True(self):
         trues = [True] * randint(0, 5)
         iterations = []
-        Stream(record(trues, iterations)).all()
+        Stream(generate(trues, iterations)).all()
         self.assertEqual(iterations, trues)
 
     def test_stops_early_if_False(self):
         bools = [True] * randint(0, 3) + [False] + [True] * randint(0, 3)
         iterations = []
-        Stream(record(bools, iterations)).all()
+        Stream(generate(bools, iterations)).all()
         self.assertNotEqual(iterations, [])
         self.assertFalse(iterations[-1])
         self.assertEqual(iterations, bools[:len(iterations)])
@@ -168,13 +208,13 @@ class TestAny(TestCase):
     def test_consumes_all_if_False(self):
         falses = [False] * randint(0, 5)
         iterations = []
-        Stream(record(falses, iterations)).any()
+        Stream(generate(falses, iterations)).any()
         self.assertEqual(iterations, falses)
 
     def test_stops_early_if_True(self):
         bools = [False] * randint(0, 3) + [True] + [False] * randint(0, 3)
         iterations = []
-        Stream(record(bools, iterations)).any()
+        Stream(generate(bools, iterations)).any()
         self.assertNotEqual(iterations, [])
         self.assertTrue(iterations[-1])
         self.assertEqual(iterations, bools[:len(iterations)])
@@ -199,7 +239,7 @@ class TestNegate(TestCase):
 
     def test_consumes_lazily(self):
         iterations = []
-        Stream(record([1, 2], iterations)).negate()
+        Stream(generate([1, 2], iterations)).negate()
         self.assertEqual(iterations, [])
 
 
@@ -229,7 +269,7 @@ class TestEmpty(TestCase):
 
     def test_consumes_only_one_item(self):
         iterations = []
-        empty = Stream(record(range(3), iterations)).empty()
+        empty = Stream(generate(range(3), iterations)).empty()
         self.assertFalse(empty)
         self.assertEqual(iterations, [0])
 
@@ -240,43 +280,30 @@ class TestEmpty(TestCase):
 class TestForEach(TestCase):
     """Tests for `for_each`."""
     def test_does_nothing_if_empty(self):
-        def fail(item):
-            raise Exception("Deliberately failing at item %s." % item)
-
-        Stream().for_each(fail)
-        Stream([]).for_each(fail)
-        # The real test is that we get here without an exception.
+        processed = []
+        Stream().for_each(recorder(processed))
+        Stream([]).for_each(recorder(processed))
+        self.assertEqual(processed, [])
 
     def test_calls_function_on_each_item(self):
         processed = []
-
-        def process(item):
-            processed.append(item)
-
         inputs = [randint(0, 10) for _ in range(randint(1, 10))]
-        Stream(inputs).for_each(process)
-
+        Stream(inputs).for_each(recorder(processed))
         self.assertEqual(processed, inputs)
 
     def test_adds_kwargs(self):
-        arguments = []
-
-        def process(item, kwarg=None):
-            arguments.append(kwarg)
-
+        args = []
         n = randint(1, 3)
-        Stream(range(n)).for_each(process, kwargs={'kwarg': 'foo'})
-
-        self.assertEqual(arguments, ['foo'] * n)
+        Stream(range(n)).for_each(
+            kwargs_recorder(args), kwargs={'kwarg': 'foo'})
+        self.assertEqual(args, [{'kwarg': 'foo'}] * n)
 
     def test_stops_at_exception(self):
         iterations = []
-
-        def process(item):
-            return 100 / (item - 3)
-
-        stream = Stream(record([1, 2, 3, 4, 5], iterations))
-        self.assertRaises(ZeroDivisionError, stream.for_each, process)
+        # This will deliberately fail when item == 3.
+        compute = lambda item: 100 / (item - 3)
+        stream = Stream(generate([1, 2, 3, 4, 5], iterations))
+        self.assertRaises(ZeroDivisionError, stream.for_each, compute)
         self.assertEqual(iterations, [1, 2, 3])
         self.assertEqual(stream.list(), [4, 5])
 
@@ -286,7 +313,7 @@ class TestDrain(TestCase):
     def test_consumes_all_items(self):
         iterations = []
         inputs = [randint(0, 10) for _ in range(randint(1, 5))]
-        Stream(record(inputs, iterations)).drain()
+        Stream(generate(inputs, iterations)).drain()
         self.assertEqual(iterations, inputs)
 
 
@@ -294,7 +321,7 @@ class TestFilter(TestCase):
     """Tests for `filter`."""
     def test_filters_on_identity_by_default(self):
         # Some values that alternately evaluate as "true" and "false".
-        values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0'] 
+        values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0']
         # You only get the "true" ones.
         self.assertEqual(
             Stream(values).filter().list(),
@@ -309,26 +336,19 @@ class TestFilter(TestCase):
     def test_adds_kwargs(self):
         args = []
         arg = randint(0, 10)
-
-        def criterion(item, kwarg):
-            args.append(kwarg)
-            return item > 3
-
+        criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
         result = stream.filter(criterion, kwargs={'kwarg': arg}).list()
 
         self.assertEqual(result, [4])
-        self.assertEqual(args, [arg] * length)
+        self.assertEqual(args, [{'kwarg': arg}] * length)
 
     def test_stops_at_exception(self):
         iterations = []
-
-        def criterion(item):
-            # This will deliberately fail when item == 3.
-            return 100 / (item - 3)
-
-        stream = Stream(record([1, 2, 3, 4, 5], iterations))
+        # This will deliberately fail when item == 3.
+        criterion = lambda item: 100 / (item - 3)
+        stream = Stream(generate([1, 2, 3, 4, 5], iterations))
         self.assertRaises(
             ZeroDivisionError,
             stream.filter(criterion).drain)
@@ -340,7 +360,7 @@ class TestFilterOut(TestCase):
     """Tests for `filter_out`."""
     def test_filters_on_identity_by_default(self):
         # Some values that alternately evaluate as "true" and "false".
-        values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0'] 
+        values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0']
         # You only get the "false" ones.
         self.assertEqual(
             Stream(values).filter_out().list(),
@@ -355,26 +375,19 @@ class TestFilterOut(TestCase):
     def test_adds_kwargs(self):
         args = []
         arg = randint(0, 10)
-
-        def criterion(item, kwarg):
-            args.append(kwarg)
-            return item > 3
-
+        criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
         result = stream.filter_out(criterion, kwargs={'kwarg': arg}).list()
 
         self.assertEqual(result, [0, 1, 2, 3])
-        self.assertEqual(args, [arg] * length)
+        self.assertEqual(args, [{'kwarg': arg}] * length)
 
     def test_stops_at_exception(self):
         iterations = []
-
-        def criterion(item):
-            # This will deliberately fail when item == 3.
-            return 100 / (item - 3)
-
-        stream = Stream(record([1, 2, 3, 4, 5], iterations))
+        # This will deliberately fail when item == 3.
+        criterion = lambda item: 100 / (item - 3)
+        stream = Stream(generate([1, 2, 3, 4, 5], iterations))
         self.assertRaises(
             ZeroDivisionError,
             stream.filter_out(criterion).drain)
@@ -398,17 +411,58 @@ class TestMap(TestCase):
 
     def test_stops_at_exception(self):
         iterations = []
-
-        def function(item):
-            # This will deliberately fail when item == 3.
-            return 100 / (item - 3)
-
-        stream = Stream(record([1, 2, 3, 4, 5], iterations))
+        # This will deliberately fail when item == 3.
+        function = lambda item: 100 / (item - 3)
+        stream = Stream(generate([1, 2, 3, 4, 5], iterations))
         self.assertRaises(
             ZeroDivisionError,
             stream.map(function).drain)
         self.assertEqual(iterations, [1, 2, 3])
         self.assertEqual(stream.list(), [4, 5])
+
+
+class TestCatch(TestCase):
+    """Tests for `catch`."""
+    def test_yields_None_for_success(self):
+        self.assertEqual(
+            Stream([1, 2]).catch(identity).list(),
+            [None, None])
+
+    def test_yields_exception(self):
+        result = Stream([1]).catch(fail_item).list()
+        self.assertEqual(len(result), 1)
+        [exception] = result
+        self.assertEqual(type(exception), SimulatedFailure)
+
+    def test_propagates_unexpected_exception(self):
+        class FatalFail(BaseException):
+            """Simulated error, not derived from Exception."""
+
+        def kaboom(item):
+            raise FatalFail("Awful simulated error.")
+
+        self.assertRaises(FatalFail, Stream([1]).catch(kaboom).drain)
+
+    def test_continues_after_exception(self):
+        result = Stream([1, 2]).catch(fail_item).list()
+        self.assertEqual(len(result), 2)
+        [fail1, fail2] = result
+        self.assertEqual(type(fail1), SimulatedFailure)
+        self.assertEqual(type(fail2), SimulatedFailure)
+
+    def test_handles_mixed_exceptions_and_successes(self):
+        def iffy(item):
+            if item % 2 == 0:
+                return "Yay!"
+            elif item == 1:
+                raise SimulatedFailure("It's a one.")
+            else:
+                raise ValueError("Some other error.")
+
+        result = Stream([0, 1, 2, 3]).catch(iffy).list()
+        self.assertEqual(
+            [type(value) for value in result],
+            [type(None), SimulatedFailure, type(None), ValueError])
 
 
 class TestLimit(TestCase):
@@ -425,7 +479,7 @@ class TestLimit(TestCase):
 
     def test_does_not_consume_beyond_limit(self):
         iterations = []
-        Stream(record(range(5), iterations)).limit(2).drain()
+        Stream(generate(range(5), iterations)).limit(2).drain()
         self.assertEqual(iterations, [0, 1])
 
 
@@ -446,7 +500,7 @@ class TestUntilValue(TestCase):
 
     def test_does_not_consume_beyond_sentinel(self):
         iterations = []
-        Stream(record(range(5), iterations)).until_value(2).drain()
+        Stream(generate(range(5), iterations)).until_value(2).drain()
         self.assertEqual(iterations, [0, 1, 2])
 
 
@@ -471,7 +525,7 @@ class TestUntilIdentity(TestCase):
     def test_does_not_consume_beyond_sentinel(self):
         stop = object()
         iterations = []
-        stream = Stream(record([0, 1, stop, 2], iterations))
+        stream = Stream(generate([0, 1, stop, 2], iterations))
         stream.until_identity(stop).drain()
         self.assertEqual(iterations, [0, 1, stop])
 
@@ -493,22 +547,18 @@ class TestUntilTrue(TestCase):
     def test_does_not_consume_beyond_sentinel(self):
         iterations = []
         many = lambda item: item > 1
-        stream = Stream(record(range(5), iterations))
+        stream = Stream(generate(range(5), iterations))
         stream.until_true(many).drain()
         self.assertEqual(iterations, [0, 1, 2])
 
     def test_adds_kwargs(self):
         args = []
-
-        def check(item, kwarg):
-            args.append(kwarg)
-            return False
-
+        check = kwargs_recorder(args, lambda item: False)
         arg = randint(0, 10)
         length = randint(1, 5)
         Stream(range(length)).until_true(check, kwargs={'kwarg': arg}).drain()
 
-        self.assertEqual(args, [arg] * length)
+        self.assertEqual(args, [{'kwarg': arg}] * length)
 
 
 class TestWhileTrue(TestCase):
@@ -528,22 +578,17 @@ class TestWhileTrue(TestCase):
     def test_does_not_consume_beyond_sentinel(self):
         iterations = []
         few = lambda item: item < 2
-        stream = Stream(record(range(5), iterations))
+        stream = Stream(generate(range(5), iterations))
         stream.while_true(few).drain()
         self.assertEqual(iterations, [0, 1, 2])
 
     def test_adds_kwargs(self):
         args = []
-
-        def check(item, kwarg):
-            args.append(kwarg)
-            return True
-
+        check = kwargs_recorder(args, lambda item: True)
         arg = randint(0, 10)
         length = randint(1, 5)
         Stream(range(length)).while_true(check, kwargs={'kwarg': arg}).drain()
-
-        self.assertEqual(args, [arg] * length)
+        self.assertEqual(args, [{'kwarg': arg}] * length)
 
 
 class TestConcat(TestCase):
@@ -688,3 +733,66 @@ class TestReduce(TestCase):
         self.assertEqual(
             Stream('abc').reduce(concatenate, '0'),
             '0.a.b.c')
+
+
+class TestPeek(TestCase):
+    """Tests for `peek`."""
+    def test_calls_function_on_items(self):
+        processed = []
+        Stream(range(3)).peek(recorder(processed)).drain()
+        self.assertEqual(processed, [0, 1, 2])
+
+    def test_passes_items_on_unchanged(self):
+        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        peeked = []
+        self.assertEqual(
+            Stream(inputs).peek(recorder(peeked)).list(),
+            inputs)
+
+    def test_adds_kwargs(self):
+        args = []
+        length = randint(1, 10)
+        foo = randint(0, 10)
+        Stream(range(length)).peek(kwargs_recorder(args), {'foo': foo}).drain()
+        self.assertEqual(args, [{'foo': foo}] * length)
+
+    def test_propagates_exception(self):
+        self.assertRaises(
+            SimulatedFailure,
+            Stream(range(1)).peek(fail_item).drain)
+
+
+class TestStringJoin(TestCase):
+    """Tests for `string_join`."""
+    def test_joins_unicode_strings(self):
+        self.assertEqual(
+            Stream(['x', 'y', 'z']).string_join('.'),
+            'x.y.z')
+
+    def test_joins_byte_strings(self):
+        self.assertEqual(
+            Stream([b'x', b'y', b'z']).string_join(b'.'),
+            b'x.y.z')
+
+    def test_joins_characters(self):
+        self.assertEqual(Stream('foo').string_join('-'), 'f-o-o')
+
+
+class TestPathJoin(TestCase):
+    """Tests for `path_join`."""
+    def test_joins_path_elements(self):
+        components = ['a', 'b', 'c']
+        self.assertEqual(
+            Stream(components).path_join(),
+            os.path.join(*components))
+
+    def test_fails_if_empty(self):
+        self.assertRaises(TypeError, Stream().path_join)
+
+    def test_fails_on_nonstring(self):
+        self.assertRaises(
+            (AttributeError, TypeError),
+            Stream(['x', 1]).path_join)
+        self.assertRaises(
+            (AttributeError, TypeError),
+            Stream(['x', None]).path_join)

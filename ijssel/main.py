@@ -13,6 +13,7 @@ __all__ = [
 
 import functools
 from itertools import chain
+import os.path
 
 from .util import (
     bind_kwargs,
@@ -20,7 +21,6 @@ from .util import (
     identity,
     ifilter,
     imap,
-    merge_dicts,
     negate,
     scan_until,
     )
@@ -78,6 +78,8 @@ class Stream:
         """Return all items as a list.
 
         Terminal.
+
+        :return: list.
         """
         return list(self.iterable)
 
@@ -85,6 +87,8 @@ class Stream:
         """Return all items as a tuple.
 
         Terminal.
+
+        :return: tuple.
         """
         return tuple(self.iterable)
 
@@ -95,6 +99,8 @@ class Stream:
 
         Terminal.  But, if there is a false item, stops right after consuming
         that item.
+
+        :return: bool.
         """
         return all(self.iterable)
 
@@ -105,11 +111,16 @@ class Stream:
 
         Terminal.  But, if there is a true item, stops right after consuming
         that item.
+
+        :return: bool.
         """
         return any(self.iterable)
 
     def negate(self):
-        """Logically negate each item."""
+        """Logically negate each item.
+
+        :return: Stream.
+        """
         return self.map(negate)
 
     def count(self):
@@ -118,6 +129,8 @@ class Stream:
         Consumes all items.
 
         Terminal.
+
+        :return: int.
         """
         total = 0
         for _ in self.iterable:
@@ -128,6 +141,8 @@ class Stream:
         """Is the stream empty?
 
         Terminal.  Consumes one item, if there is one.
+
+        :return: bool.
         """
         sentinel = object()
         return next(iter(self), sentinel) is sentinel
@@ -150,45 +165,94 @@ class Stream:
             pass
 
     def filter(self, criterion=identity, kwargs=None):
-        """Drop any items for which criterion(item) is not true."""
+        """Drop any items for which criterion(item) is not true.
+
+        :return: Stream.
+        """
         return Stream(ifilter(bind_kwargs(criterion, kwargs), self.iterable))
 
     def filter_out(self, criterion=identity, kwargs=None):
-        """Drop any items for which criterion(item) is true."""
+        """Drop any items for which criterion(item) is true.
+
+        :return: Stream.
+        """
         call = bind_kwargs(criterion, kwargs)
         return Stream(item for item in self.iterable if not call(item))
 
     def map(self, function, kwargs=None):
-        """Transform stream: apply function to each item."""
+        """Transform stream: apply function to each item.
+
+        :return: Stream.
+        """
         return Stream(imap(bind_kwargs(function, kwargs), self.iterable))
 
+    def catch(self, function, kwargs=None):
+        """Iterate exceptions raised by `function(item)` for each item.
+
+        Produces None values for items where no exception was raised.
+
+        Only catches Exception-based exceptions.  All other exceptions are
+        simply propagated.
+
+        :return: Stream.
+        """
+        if kwargs is None:
+            kwargs = {}
+
+        def handle(item):
+            try:
+                function(item, **kwargs)
+            except Exception as error:
+                return error
+            else:
+                return None
+
+        return self.map(handle)
+
     def limit(self, limit):
-        """Iterate only the first limit items."""
+        """Iterate only the first limit items.
+
+        :return: Stream.
+        """
         return Stream(head(self.iterable, limit))
 
     def until_value(self, sentinel):
         """Iterate items until an item equals sentinel.
+
+        :return: Stream.
         """
         return Stream(
             scan_until(self.iterable, lambda item: item == sentinel))
 
     def until_identity(self, sentinel):
-        """Iterate items until until an item is the sentinel object."""
+        """Iterate items until until an item is the sentinel object.
+
+        :return: Stream.
+        """
         return Stream(
             scan_until(self.iterable, lambda item: item is sentinel))
 
     def until_true(self, criterion, kwargs=None):
-        """Stop iterating when criterion(item) is true."""
+        """Stop iterating when criterion(item) is true.
+
+        :return: Stream.
+        """
         return Stream(
             scan_until(self.iterable, bind_kwargs(criterion, kwargs)))
 
     def while_true(self, criterion, kwargs=None):
-        """Stop iterating when criterion(item) is false."""
+        """Stop iterating when criterion(item) is false.
+
+        :return: Stream.
+        """
         call = bind_kwargs(criterion, kwargs)
         return self.until_true(lambda item: not call(item))
 
     def concat(self):
-        """Items are themselves sequences.  Iterate them all combined."""
+        """Items are themselves sequences.  Iterate them all combined.
+
+        :return: Stream.
+        """
         return Stream(chain.from_iterable(self.iterable))
 
     def group(self, key=identity, key_kwargs=None, value=identity,
@@ -205,6 +269,8 @@ class Stream:
         key.
 
         Terminal.
+
+        :return: dict.
         """
         key_call = bind_kwargs(key, key_kwargs)
         value_call = bind_kwargs(value, val_kwargs)
@@ -219,9 +285,16 @@ class Stream:
     def sum(self, initial=0):
         """Add up all elements, starting with initial value.
 
+        Try not to use this on strings.  For that special case, `join` will be
+        faster.
+
         Terminal.
+
+        :return: result of summing initial plus all items.
         """
         add = lambda l, r: l + r
+        # Built-in sum function will refuse to run on strings.  Let's not go
+        # that far.  We want to present an API that's easy to understand.
         return self.reduce(add, initial=initial)
 
     def reduce(self, function, initial=None, kwargs=None):
@@ -235,13 +308,45 @@ class Stream:
         Uses `initial` as the starting value.
 
         Terminal.
+
+        :return: result of repeated invocations of function on initial and all
+            items.
         """
         return functools.reduce(
             bind_kwargs(function, kwargs), self.iterable, initial)
 
-# TODO: peek
-# TODO: join
-# TODO: path_join
+    def peek(self, function, kwargs=None):
+        """Pass on each item unchanged, but also, run function on it.
+
+        :return: Stream.
+        """
+        if kwargs is None:
+            kwargs = {}
+
+        def process(item):
+            function(item, **kwargs)
+            return item
+
+        return self.map(process)
+
+    def string_join(self, sep=''):
+        """Perform a string join on all items, separated by sep.
+
+        Calls `sep.join(...)` on all items.
+
+        Terminal.
+        """
+        return sep.join(self)
+
+    def path_join(self):
+        """Join native filesystem path components into a single path.
+
+        Elements must be either byte strings or Unicode strings.  Depending on
+        your Python implementation, it may also be an error to mix the two.
+
+        Terminal.
+        """
+        return os.path.join(*self)
+
 # TODO: average, mean?
-# TODO: catch
 # TODO: get
