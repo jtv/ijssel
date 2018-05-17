@@ -16,7 +16,6 @@ from ..ijssel.util import (
     identity,
     ifilter,
     imap,
-    merge_dicts,
     negate,
     )
 

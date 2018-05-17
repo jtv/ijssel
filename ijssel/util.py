@@ -13,12 +13,10 @@ __all__ = [
     'identity',
     'ifilter',
     'imap',
-    'merge_dicts',
     'negate',
     'scan_until',
     ]
 
-import functools
 import itertools
 from sys import version_info
 
@@ -33,18 +31,6 @@ if version_info.major >= 3:
     imap = map
 else:
     imap = itertools.imap
-
-
-def merge_dicts(*args):
-    """Combine any number of dicts into one.
-
-    Returns a dict containing all keys from any of args.  If the same key
-    occurs in more than one argument, it will get the last-seen value.
-    """
-    merged = {}
-    for more in args:
-        merged.update(more)
-    return merged
 
 
 def bind_kwargs(function, kwargs=None):
