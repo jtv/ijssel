@@ -655,4 +655,36 @@ class TestSum(TestCase):
 
 class TestReduce(TestCase):
     """Tests for `reduce`."""
-# XXX: TODO:
+    def test_defaults_to_initial_value(self):
+        initial = randint(0, 10)
+        multiply = lambda l, r: l * r
+        self.assertEqual(
+            Stream().reduce(multiply, initial),
+            initial)
+
+    def test_combines_initial_value_with_single_item(self):
+        initial = randint(1, 10)
+        value = randint(1, 10)
+        multiply = lambda l, r: l * r
+        self.assertEqual(
+            Stream([value]).reduce(multiply, initial),
+            initial * value)
+
+    def test_reduces_series(self):
+        add = lambda l, r: l + r
+        self.assertEqual(
+            Stream([1, 2, 3, 4]).reduce(add, 0),
+            10)
+
+    def test_combines_initial_value_with_series(self):
+        initial = randint(2, 10)
+        multiply = lambda l, r: l * r
+        self.assertEqual(
+            Stream([1, 2, 3]).reduce(multiply, initial),
+            initial * 1 * 2 * 3)
+
+    def test_processes_left_to_right(self):
+        concatenate = lambda l, r: '.'.join([l, r])
+        self.assertEqual(
+            Stream('abc').reduce(concatenate, '0'),
+            '0.a.b.c')
