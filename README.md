@@ -50,3 +50,41 @@ Should work on any operating system, as long as it's running a supported Python
 version.
 
 External dependencies: minimal.  It'll probably require `six` at some point.
+
+
+Use
+---
+
+The essential API is in the ijssel.Stream class.  You wrap any kind of
+sequence in a Stream, call a method on it.  In many cases it will return
+another Stream, on which you can invoke the next method and so on.
+
+It's a lot like shell pipes.  For instance, here's how in a Unix shell you
+might sort the lines in a text file, eliminate the duplicates, and count how
+many you've got left:
+
+    cat file.txt | sort | uniq | wc -l
+
+(Yes, there's better ways of doing that.  Not the point.)
+
+Here's how you might do it in Python with IJssel:
+
+    with open('file.txt') as lines:
+        count = Stream(lines).sort().uniq().count()
+    print(count)
+
+So the idea is that you build chains, or pipelines, of operations.  Each step
+in the chain transforms the stream in some way, or applies some action to each
+item in the stream.  Many of the methods on the stream return another stream,
+based on the previous one in the chain but transformed in some way.
+
+The chains don't actually do anything though, until you call a _terminal_
+method.  These are the methods which actually consume items from the stream.
+Iterating a stream is a terminal operation, as is sorting it, counting its
+number of elements, and so on.  Those things can't be done without processing
+items from the stream.  Until you call a terminal operation, you're just
+setting up operations but not triggering them yet.
+
+As a terminal operation at the "back" of your chain pulls an item from the
+stream, the item goes through the stages in your chain from left to right.
+Then all of the same steps happen for the next item in the stream, and so on.
