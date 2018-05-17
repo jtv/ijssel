@@ -40,8 +40,8 @@ class Stream:
 
     Streams are iterated lazily except where specified.  So nothing happens
     and your callbacks are not called, until you actually do something to
-    pull values from your stream.  A stream will not read all of its items
-    into memory at once, which can be useful for large data sets, and it
+    pull values from your stream.  A stream will generally not read all of its
+    items into memory at once, which can be useful for large data sets, and it
     won't call any of the functions you pass on items until it really has to.
     You can even have infinite streams, such as one that generates digits of Pi
     on demand.
@@ -59,17 +59,17 @@ class Stream:
     is going to have to read all of the items right there.
 
     Sometimes a terminal operation doesn't really consume all items in the
-    stream.  It may stop if a function you passed raises an exception.  But in
-    other cases, the operation can simply complete early.  For example, the
-    "all" method can stop as soon as it hits a False item.
+    stream.  It may stop if a function you passed raises an exception.  Or
+    sometimes the operation can simply complete early.  For example, the `all`
+    method can stop as soon as it hits a False item.
 
     Many methods take both a function and a "kwargs" as parameters.  That's
-    shorthand for parameter binding.  To avoid confusion with positional
-    arguments, it binds only keyword arguments.
+    shorthand for parameter binding.  To avoid confusion when it comes to
+    positional arguments, it binds only keyword arguments.
 
     The kwargs trick can save you some hard-to-read antics.  For instance, if
     you have a sequence of lists and you want to sort them all in reverse
-    order, you can pass the "reverse=True" parameter to each call:
+    order, you can pass the "reverse=True" parameter to each call to `sorted`:
 
         stream.map(sorted, {'reverse': True})
     """
