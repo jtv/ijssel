@@ -572,20 +572,20 @@ class TestConcat(TestCase):
         self.assertEqual(Stream(['xy', 'z']).concat().list(), ['x', 'y', 'z'])
 
 
-class TestPartition(TestCase):
-    """Tests for `partition`."""
+class TestGroup(TestCase):
+    """Tests for `group`."""
     def test_returns_empty_dict_for_empty_stream(self):
-        self.assertEqual(Stream().partition(), {})
+        self.assertEqual(Stream().group(), {})
 
-    def test_partitions_by_item_by_default(self):
+    def test_groups_by_item_by_default(self):
         self.assertEqual(
-            Stream(range(3)).partition(),
+            Stream(range(3)).group(),
             {0: [0], 1: [1], 2: [2]})
 
-    def test_partitions_by_key_result(self):
+    def test_groups_by_key_result(self):
         half = lambda number: int(number / 2)
         self.assertEqual(
-            Stream(range(3)).partition(key=half),
+            Stream(range(3)).group(key=half),
             {
                 0: [0, 1],
                 1: [2],
@@ -595,7 +595,7 @@ class TestPartition(TestCase):
         mod_3 = lambda number: number % 3
         inputs = [4, 8, 7, 0, 2, 1, 5, 3, 6, 9]
         self.assertEqual(
-            Stream(inputs).partition(key=mod_3),
+            Stream(inputs).group(key=mod_3),
             {
                 0: [0, 3, 6, 9],
                 1: [4, 7, 1],
@@ -606,7 +606,7 @@ class TestPartition(TestCase):
         even = lambda number: number % 2 == 0
         inputs = [0, 1, 0, 3, 0, 5]
         self.assertEqual(
-            Stream(inputs).partition(key=even),
+            Stream(inputs).group(key=even),
             {
                 True: [0, 0, 0],
                 False: [1, 3, 5],
@@ -617,7 +617,7 @@ class TestPartition(TestCase):
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
-            stream.partition(key=multiply, key_kwargs={'factor': factor}),
+            stream.group(key=multiply, key_kwargs={'factor': factor}),
             {
                 0: [0],
                 1 * factor: [1],
@@ -629,7 +629,7 @@ class TestPartition(TestCase):
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
-            stream.partition(value=multiply, val_kwargs={'factor': factor}),
+            stream.group(value=multiply, val_kwargs={'factor': factor}),
             {
                 0: [0],
                 1: [factor],
