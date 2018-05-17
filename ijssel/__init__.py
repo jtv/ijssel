@@ -7,3 +7,7 @@ from __future__ import (
     )
 
 from .main import Stream
+
+
+# Suppress lint warnings about unused symbols.
+_ = Stream
