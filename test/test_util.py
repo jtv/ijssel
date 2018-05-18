@@ -13,10 +13,10 @@ from unittest import TestCase
 
 from ..ijssel.util import (
     bind_kwargs,
-    identity,
-    ifilter,
-    imap,
-    negate,
+#    identity,
+#    ifilter,
+#    imap,
+#    negate,
     )
 
 
