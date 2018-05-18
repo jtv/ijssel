@@ -13,7 +13,7 @@ from unittest import TestCase
 
 from ..ijssel.util import (
     bind_kwargs,
-#    identity,
+    identity,
 #    ifilter,
 #    imap,
 #    negate,
@@ -36,3 +36,10 @@ class TestBindKwargs(TestCase):
         self.assertEqual(
             times(arg),
             arg * factor)
+
+
+class TestIdentity(TestCase):
+    """Tests for `identity`."""
+    def test_returns_argument(self):
+        arg = randint(0, 100)
+        self.assertEqual(identity(arg), arg)
