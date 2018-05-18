@@ -1,6 +1,6 @@
 #! /usr/bin/env make
 
-all: lint test
+all: lint test doc
 
 lint:
 	pocketlint *.py
@@ -10,4 +10,9 @@ test:
 	tox
 
 
-.PHONY: lint test
+doc:
+	pydoc -w ijssel
+	mv ijssel.html doc/pydoc/
+
+
+.PHONY: doc lint test
