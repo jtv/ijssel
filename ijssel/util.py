@@ -13,6 +13,7 @@ __all__ = [
     'identity',
     'ifilter',
     'imap',
+    'int_types',
     'negate',
     'scan_until',
     'uniq',
@@ -22,16 +23,25 @@ import itertools
 from sys import version_info
 
 
+# Guaranteed-lazy version of filter.
 if version_info.major >= 3:
     ifilter = filter
 else:
     ifilter = itertools.ifilter
 
 
+# Guaranteed-lazy version of map.
 if version_info.major >= 3:
     imap = map
 else:
     imap = itertools.imap
+
+
+# The integer type(s).  Python 2 has two, Python 3 just one.
+if version_info.major >= 3:
+    int_types = (int, )
+else:
+    int_types = (int, long)
 
 
 def bind_kwargs(function, kwargs=None):

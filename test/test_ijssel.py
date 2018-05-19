@@ -482,6 +482,17 @@ class TestLimit(TestCase):
         Stream(generate(range(5), iterations)).limit(2).drain()
         self.assertEqual(iterations, [0, 1])
 
+    def test_limiting_to_zero_produces_empty_stream(self):
+        self.assertEqual(Stream(range(5)).limit(0).list(), [])
+
+    def test_raises_TypeError_if_limit_is_not_integer(self):
+        self.assertRaises(TypeError, Stream(range(5)).limit, None)
+        self.assertRaises(TypeError, Stream(range(5)).limit, '5')
+        self.assertRaises(TypeError, Stream(range(5)).limit, [1])
+
+    def test_raises_ValueError_if_limit_is_negative(self):
+        self.assertRaises(ValueError, Stream(range(5)).limit, -1)
+
 
 class TestUntilValue(TestCase):
     """Tests for `until_value`."""

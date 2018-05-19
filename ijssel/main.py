@@ -21,6 +21,7 @@ from .util import (
     identity,
     ifilter,
     imap,
+    int_types,
     negate,
     scan_until,
     uniq,
@@ -230,6 +231,10 @@ class Stream:
 
         :return: Stream.
         """
+        if not isinstance(limit, int_types):
+            raise TypeError("Stream.limit takes an integer; got '%s'." % limit)
+        if limit < 0:
+            raise ValueError("Stream.limit got negative limit: %s." % limit)
         return self._clone(head(self.iterable, limit))
 
     def until_value(self, sentinel):

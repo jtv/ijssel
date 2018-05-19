@@ -16,6 +16,7 @@ from ..ijssel.util import (
     identity,
 #    ifilter,
 #    imap,
+    int_types,
 #    negate,
     )
 
@@ -43,3 +44,21 @@ class TestIdentity(TestCase):
     def test_returns_argument(self):
         arg = randint(0, 100)
         self.assertEqual(identity(arg), arg)
+
+
+class TestIntTypes(TestCase):
+    """Tests for `int_types`."""
+    def test_small_number_fits(self):
+        self.assertTrue(isinstance(0, int_types))
+
+    def test_large_number_fits(self):
+        # This is an int in Python 3, but a long in Python 2.
+        self.assertTrue(isinstance(9999999999999999999999, int_types))
+
+    def test_other_types_do_not_fit(self):
+        self.assertFalse(isinstance(None, int_types))
+        self.assertFalse(isinstance(0.0, int_types))
+        self.assertFalse(isinstance(u'', int_types))
+        self.assertFalse(isinstance(b'', int_types))
+        self.assertFalse(isinstance([], int_types))
+        self.assertFalse(isinstance(object(), int_types))
