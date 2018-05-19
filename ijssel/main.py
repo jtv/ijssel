@@ -270,7 +270,7 @@ class Stream:
         return self._clone(
             takewhile(lambda item: item is not sentinel, self.iterable))
 
-    def until_true(self, criterion, kwargs=None):
+    def until_true(self, criterion=identity, kwargs=None):
         """Stop iterating when criterion(item) is true.
 
         :return: Stream.
@@ -278,7 +278,7 @@ class Stream:
         return self._clone(
             scan_until(self.iterable, bind_kwargs(criterion, kwargs)))
 
-    def while_true(self, criterion, kwargs=None):
+    def while_true(self, criterion=identity, kwargs=None):
         """Stop iterating when criterion(item) is false.
 
         :return: Stream.
