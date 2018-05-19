@@ -11,6 +11,7 @@ __all__ = [
     'Stream',
     ]
 
+from collections import OrderedDict
 import functools
 from itertools import (
     chain,
@@ -35,8 +36,7 @@ from .util import (
 
 # TODO: What happens to original when you iterate a modified stream?
 # TODO: What's a good, extensible way to generalise e.g. averages and medians?
-# TODO: Get a single item, get n items?
-# TODO: Version of uniq that doesn't care about consecutiveness?
+# TODO: next?  Repeatable slicing?
 
 class Stream:
     """Stream class.
@@ -137,6 +137,33 @@ class Stream:
         :return: tuple.
         """
         return tuple(self.iterable)
+
+    def set(self):
+        """Return all items as a set.
+
+        Terminal.
+
+        :return: set.
+        """
+        return set(self.iterable)
+
+    def dict(self):
+        """Return all items as a dict.  Each item must be a key/value pair.
+
+        Terminal.
+
+        :return: dict.
+        """
+        return dict(self.iterable)
+
+    def ordered_dict(self):
+        """Return items as an OrderedDict.  Each item must be a key/value pair.
+
+        Terminal.
+
+        :return: OrderedDict.
+        """
+        return OrderedDict(self.iterable)
 
     def all(self):
         """Return bool: Is each item true?

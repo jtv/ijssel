@@ -8,6 +8,7 @@ from __future__ import (
 
 __metaclass__ = type
 
+from collections import OrderedDict
 import os.path
 from random import randint
 from unittest import TestCase
@@ -205,12 +206,14 @@ class TestGetItemSlice(TestCase):
 class TestList(TestCase):
     """Tests for `list`."""
     def test_returns_empty_for_empty_stream(self):
-        self.assertEqual(Stream().list(), [])
+        empty = Stream().list()
+        self.assertEqual(empty, [])
+        self.assertIs(type(empty), list)
 
     def test_returns_items_as_list(self):
         self.assertEqual(Stream(range(3)).list(), [0, 1, 2])
 
-    def test_turns_iterator_into_list(self):
+    def test_turns_generator_into_list(self):
         item = randint(0, 10)
 
         def iterate():
@@ -222,18 +225,90 @@ class TestList(TestCase):
 class TestTuple(TestCase):
     """Tests for `tuple`."""
     def test_returns_empty_for_empty_stream(self):
-        self.assertEqual(Stream().tuple(), tuple())
+        empty = Stream().tuple()
+        self.assertEqual(empty, tuple())
+        self.assertIs(type(empty), tuple)
 
     def test_returns_items_as_tuple(self):
         self.assertEqual(Stream(range(3)).tuple(), (0, 1, 2))
 
-    def test_turns_iterator_into_tuple(self):
+    def test_turns_generator_into_tuple(self):
         item = randint(0, 10)
 
         def iterate():
             yield item
 
         self.assertEqual(Stream(iterate()).tuple(), tuple([item]))
+
+
+class TestSet(TestCase):
+    """Tests for `set`."""
+    def test_returns_empty_for_empty_stream(self):
+        empty = Stream().set()
+        self.assertEqual(empty, set())
+        self.assertEqual(type(empty), set)
+
+    def test_returns_items_as_set(self):
+        self.assertEqual(Stream([0, 1, 2, 0, 2, 1]).set(), set([0, 1, 2]))
+
+    def test_turns_generator_into_set(self):
+        item = randint(0, 10)
+
+        def iterate():
+            yield item
+
+        self.assertEqual(Stream(iterate()).set(), {item})
+
+
+class TestDict(TestCase):
+    """Tests for `dict`."""
+    def test_returns_empty_for_empty_stream(self):
+        empty = Stream().dict()
+        self.assertEqual(empty, {})
+        self.assertEqual(type(empty), dict)
+
+    def test_returns_items_as_set(self):
+        self.assertEqual(
+            Stream([(1, 2), (2, 4), (3, 6)]).dict(),
+            {
+                1: 2,
+                2: 4,
+                3: 6,
+            })
+
+    def test_turns_generator_into_set(self):
+        key = randint(0, 10)
+        value = randint(0, 10)
+
+        def iterate():
+            yield (key, value)
+
+        self.assertEqual(Stream(iterate()).dict(), {key: value})
+
+
+class TestOrderedDict(TestCase):
+    """Tests for `ordered_dict`."""
+    def test_returns_empty_for_empty_stream(self):
+        empty = Stream().ordered_dict()
+        self.assertEqual(empty, OrderedDict())
+        self.assertEqual(type(empty), OrderedDict)
+
+    def test_returns_items_as_set(self):
+        inputs = [(9, 18), (2, 4), (3, 6)]
+        self.assertEqual(
+            Stream(inputs).ordered_dict(),
+            OrderedDict(inputs))
+
+    def test_turns_generator_into_set(self):
+        key = randint(0, 10)
+        value = randint(0, 10)
+
+        def iterate():
+            yield (key, value)
+
+        self.assertEqual(
+            Stream(iterate()).ordered_dict(),
+            OrderedDict([(key, value)]))
 
 
 class TestAll(TestCase):
