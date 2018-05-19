@@ -229,6 +229,8 @@ class Stream:
     def limit(self, limit):
         """Iterate only the first limit items.
 
+        :raise TypeError: If limit is not a number.
+        :raise ValueError: If limit is less than zero.
         :return: Stream.
         """
         if not isinstance(limit, int_types):
