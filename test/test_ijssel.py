@@ -115,7 +115,7 @@ class TestIteration(TestCase):
         self.assertRaises(TypeError, list, Stream(None))
         self.assertRaises(TypeError, list, Stream(10))
 
-    def test_iterates_lazily(self):
+    def test_lazy(self):
         iterations = []
         sequence = iter(Stream(generate(range(5), iterations)))
         self.assertEqual(iterations, [])
@@ -237,7 +237,7 @@ class TestNegate(TestCase):
         falses = [False, 0, '', [], {}]
         self.assertEqual(Stream(falses).negate().list(), [True] * len(falses))
 
-    def test_iterates_lazily(self):
+    def test_lazy(self):
         iterations = []
         Stream(generate([1, 2], iterations)).negate()
         self.assertEqual(iterations, [])
@@ -333,6 +333,11 @@ class TestFilter(TestCase):
             Stream([0, 1, 2, 3, 4]).filter(even).list(),
             [0, 2, 4])
 
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).filter()
+        self.assertEqual(iterations, [])
+
     def test_adds_kwargs(self):
         args = []
         arg = randint(0, 10)
@@ -372,6 +377,11 @@ class TestFilterOut(TestCase):
             Stream([0, 1, 2, 3, 4]).filter_out(even).list(),
             [1, 3])
 
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).filter_out()
+        self.assertEqual(iterations, [])
+
     def test_adds_kwargs(self):
         args = []
         arg = randint(0, 10)
@@ -402,6 +412,11 @@ class TestMap(TestCase):
         self.assertEqual(
             Stream(range(3)).map(double).list(),
             [0, 2, 4])
+
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).map(identity)
+        self.assertEqual(iterations, [])
 
     def test_adds_kwargs(self):
         stream = Stream([[1, 2, 3, 4]])
@@ -454,13 +469,13 @@ class TestStarMap(TestCase):
             Stream(inputs).starmap(process).list(),
             ['9/8/7', '0', ''])
 
-    def test_iterates_lazily(self):
-        processed = []
-        inputs = [[randint(0, 10)] for _ in range(randint(1, 10))]
-        Stream(inputs).starmap(recorder(processed))
-        self.assertEqual(processed, [])
+    def test_lazy(self):
+        process = lambda *args: 1
+        iterations = []
+        Stream(generate([[1]], iterations)).starmap(process)
+        self.assertEqual(iterations, [])
 
-    def test_passes_kwargs(self):
+    def test_adds_kwargs(self):
         args = []
         arg = randint(0, 10)
         inputs = [[randint(0, 10)] for _ in range(randint(1, 10))]
@@ -481,6 +496,18 @@ class TestCatch(TestCase):
         self.assertEqual(len(result), 1)
         [exception] = result
         self.assertEqual(type(exception), SimulatedFailure)
+
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).catch(identity)
+        self.assertEqual(iterations, [])
+
+    def test_adds_kwargs(self):
+        args = []
+        arg = randint(0, 10)
+        inputs = range(randint(1, 10))
+        Stream(inputs).catch(kwargs_recorder(args), kwargs={'Q': arg}).drain()
+        self.assertEqual(args, [{'Q': arg}] * len(inputs))
 
     def test_propagates_unexpected_exception(self):
         class FatalFail(BaseException):
@@ -525,6 +552,11 @@ class TestLimit(TestCase):
             Stream(range(3)).limit(10).list(),
             [0, 1, 2])
 
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).limit(3)
+        self.assertEqual(iterations, [])
+
     def test_does_not_consume_beyond_limit(self):
         iterations = []
         Stream(generate(range(5), iterations)).limit(2).drain()
@@ -562,6 +594,11 @@ class TestUntilValue(TestCase):
         Stream(generate(range(5), iterations)).until_value(2).drain()
         self.assertEqual(iterations, [0, 1, 2])
 
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).until_value(2)
+        self.assertEqual(iterations, [])
+
 
 class TestUntilIdentity(TestCase):
     """Tests for `until_identity`."""
@@ -588,6 +625,11 @@ class TestUntilIdentity(TestCase):
         stream.until_identity(stop).drain()
         self.assertEqual(iterations, [0, 1, stop])
 
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).until_identity(2)
+        self.assertEqual(iterations, [])
+
 
 class TestUntilTrue(TestCase):
     """Tests for `until_true`."""
@@ -609,6 +651,11 @@ class TestUntilTrue(TestCase):
         stream = Stream(generate(range(5), iterations))
         stream.until_true(many).drain()
         self.assertEqual(iterations, [0, 1, 2])
+
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).until_true()
+        self.assertEqual(iterations, [])
 
     def test_adds_kwargs(self):
         args = []
@@ -640,6 +687,12 @@ class TestWhileTrue(TestCase):
         stream = Stream(generate(range(5), iterations))
         stream.while_true(few).drain()
         self.assertEqual(iterations, [0, 1, 2])
+
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).while_true(
+            lambda item: not item)
+        self.assertEqual(iterations, [])
 
     def test_adds_kwargs(self):
         args = []
@@ -674,6 +727,11 @@ class TestConcat(TestCase):
 
     def test_concatenates_strings(self):
         self.assertEqual(Stream(['xy', 'z']).concat().list(), ['x', 'y', 'z'])
+
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate([range(3)], iterations)).concat()
+        self.assertEqual(iterations, [])
 
 
 class TestGroup(TestCase):
@@ -809,6 +867,11 @@ class TestUniq(TestCase):
         half = lambda item: int(item / 2)
         self.assertEqual(Stream([0, 1, 2, 3, 4]).uniq(half).list(), [0, 2, 4])
 
+    def test_iterates_lazily(self):
+        iterations = []
+        Stream(generate(range(4), iterations)).uniq()
+        self.assertEqual(iterations, [])
+
     def test_adds_kwargs(self):
         args = []
         inputs = [randint(0, 10) for _ in range(10)]
@@ -830,6 +893,13 @@ class TestPeek(TestCase):
         self.assertEqual(
             Stream(inputs).peek(recorder(peeked)).list(),
             inputs)
+
+    def test_iterates_lazily(self):
+        iterations = []
+        processed = []
+        Stream(generate(range(5), iterations)).peek(recorder(processed))
+        self.assertEqual(iterations, [])
+        self.assertEqual(processed, [])
 
     def test_adds_kwargs(self):
         args = []
