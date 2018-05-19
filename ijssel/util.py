@@ -12,6 +12,7 @@ __all__ = [
     'head',
     'identity',
     'ifilter',
+    'ifilterfalse',
     'imap',
     'int_types',
     'negate',
@@ -23,17 +24,14 @@ import itertools
 from sys import version_info
 
 
-# Guaranteed-lazy version of filter.
+# Guaranteed-lazy versions of various iteration helpers.
 if version_info.major >= 3:
     ifilter = filter
-else:
-    ifilter = itertools.ifilter
-
-
-# Guaranteed-lazy version of map.
-if version_info.major >= 3:
+    ifilterfalse = itertools.filterfalse
     imap = map
 else:
+    ifilter = itertools.ifilter
+    ifilterfalse = itertools.ifilterfalse
     imap = itertools.imap
 
 

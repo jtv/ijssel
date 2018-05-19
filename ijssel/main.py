@@ -23,6 +23,7 @@ from .util import (
     head,
     identity,
     ifilter,
+    ifilterfalse,
     imap,
     int_types,
     negate,
@@ -195,9 +196,8 @@ class Stream:
 
         :return: Stream.
         """
-        call = bind_kwargs(criterion, kwargs)
         return self._clone(
-            item for item in self.iterable if not call(item))
+            ifilterfalse(bind_kwargs(criterion, kwargs), self.iterable))
 
     def map(self, function, kwargs=None):
         """Transform stream: apply function to each item.
