@@ -12,7 +12,10 @@ __all__ = [
     ]
 
 import functools
-from itertools import chain
+from itertools import (
+    chain,
+    takewhile,
+    )
 import os.path
 
 from .util import (
@@ -268,8 +271,8 @@ class Stream:
 
         :return: Stream.
         """
-        call = bind_kwargs(criterion, kwargs)
-        return self.until_true(lambda item: not call(item))
+        return self._clone(
+            takewhile(bind_kwargs(criterion, kwargs), self.iterable))
 
     def concat(self):
         """Items are themselves sequences.  Iterate them all combined.
