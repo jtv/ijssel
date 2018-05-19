@@ -85,6 +85,32 @@ class Stream:
     def __iter__(self):
         return iter(self.iterable)
 
+    def __getitem__(self, index):
+        """Index or slice a stream.
+
+        Indexing retrieves a single item.  This is a terminal operation.
+
+        Slicing limits the stream to a subset.  This is nonterminal.
+
+        :param index: Either an integer index, or a slice.
+        :return: If index was an integer index, the item at index.  If index
+            was a slice, a Stream.
+        :raise IndexError: When passing an integer index that's out of range.
+            Negative indexes are considered out of range.
+        :raise TypeError: If index is neither an integer nor a slice.
+        """
+        if isinstance(index, slice):
+            start, stop, step = index.start, index.stop, index.step
+            return self._clone(islice(self.iterable, start, stop, step))
+        elif isinstance(index, int_types):
+            if index < 0:
+                raise IndexError("Negative index not supported: %d." % index)
+            element_slice = islice(self.iterable, index, index + 1)
+            return tuple(element_slice)[0]
+        else:
+            raise TypeError(
+                "Invalid type for Stream indexing/slicing: '%s'." % index)
+
     def _clone(self, iterable):
         """Create a new instance based on the current one.
 
@@ -240,19 +266,6 @@ class Stream:
                 return None
 
         return self.map(handle)
-
-    def limit(self, limit):
-        """Iterate only the first limit items.
-
-        :raise TypeError: If limit is not a number.
-        :raise ValueError: If limit is less than zero.
-        :return: Stream.
-        """
-        if not isinstance(limit, int_types):
-            raise TypeError("Stream.limit takes an integer; got '%s'." % limit)
-        if limit < 0:
-            raise ValueError("Stream.limit got negative limit: %s." % limit)
-        return self._clone(islice(self.iterable, limit))
 
     def until_value(self, sentinel):
         """Iterate items until an item equals sentinel.

@@ -131,6 +131,77 @@ class TestIteration(TestCase):
         self.assertEqual(iterations, [0, 1, 2, 3, 4])
 
 
+class TestGetItemIndex(TestCase):
+    """Tests for `__getitem__` (when passing an index)."""
+    def test_returns_item_from_stream(self):
+        items = [4, 3, 2, 1, 0]
+        self.assertEqual(Stream(items)[0], 4)
+        self.assertEqual(Stream(items)[1], 3)
+        self.assertEqual(Stream(items)[3], 1)
+        self.assertEqual(Stream(items)[4], 0)
+
+    def test_works_on_generator(self):
+        def iterate(inputs):
+            for item in inputs:
+                yield item
+
+        inputs = [randint(0, 10) for _ in range(1, 10)]
+        index = randint(0, len(inputs) - 1)
+
+        self.assertEqual(
+            Stream(iterate(inputs))[index],
+            inputs[index])
+
+    def test_raises_IndexError_if_out_of_range(self):
+        access = lambda stream, index: stream[index]
+        self.assertRaises(IndexError, access, Stream([0, 1, 2]), 3)
+
+    def test_raises_IndexError_if_negative(self):
+        access = lambda stream, index: stream[index]
+        self.assertRaises(IndexError, access, Stream([0, 1, 2]), -1)
+
+    def test_raises_TypeError_if_not_integer(self):
+        access = lambda stream, index: stream[index]
+        self.assertRaises(TypeError, access, Stream([0, 1, 2]), '0')
+        self.assertRaises(TypeError, access, Stream([0, 1, 2]), 0.0)
+        self.assertRaises(TypeError, access, Stream([0, 1, 2]), None)
+        self.assertRaises(TypeError, access, Stream([0, 1, 2]), object())
+
+
+class TestGetItemSlice(TestCase):
+    """Tests for `__getitem__` (when passing a slice)."""
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations))[1:3]
+        self.assertEqual(iterations, [])
+
+    def test_returns_stream(self):
+        self.assertTrue(isinstance(Stream(range(5))[1:3], Stream))
+
+    def test_retrieves_from_start_to_stop(self):
+        self.assertEqual(Stream(range(10))[4:8].list(), [4, 5, 6, 7])
+
+    def test_retrieves_from_start_to_end(self):
+        self.assertEqual(Stream(range(10))[7:].list(), [7, 8, 9])
+
+    def test_retrieves_from_beginning_to_stop(self):
+        self.assertEqual(Stream(range(10))[:4].list(), [0, 1, 2, 3])
+
+    def test_retrieves_from_beginning_to_end(self):
+        self.assertEqual(Stream(range(5))[:].list(), [0, 1, 2, 3, 4])
+
+    def test_honours_step(self):
+        self.assertEqual(Stream(range(10))[::3].list(), [0, 3, 6, 9])
+        self.assertEqual(Stream(range(10))[1:6:2].list(), [1, 3, 5])
+        self.assertEqual(Stream(range(10))[:4:2].list(), [0, 2])
+        self.assertEqual(Stream(range(10))[5::2].list(), [5, 7, 9])
+
+    def test_does_not_iterate_beyond_stop(self):
+        iterations = []
+        Stream(generate(range(5), iterations))[:3].drain()
+        self.assertEqual(iterations, [0, 1, 2])
+
+
 class TestList(TestCase):
     """Tests for `list`."""
     def test_returns_empty_for_empty_stream(self):
@@ -538,40 +609,6 @@ class TestCatch(TestCase):
         self.assertEqual(
             [type(value) for value in result],
             [type(None), SimulatedFailure, type(None), ValueError])
-
-
-class TestLimit(TestCase):
-    """Tests for `limit`."""
-    def test_stops_iteration_at_limit(self):
-        self.assertEqual(
-            Stream(range(5)).limit(2).list(),
-            [0, 1])
-
-    def test_does_nothing_if_limit_is_beyond_stream(self):
-        self.assertEqual(
-            Stream(range(3)).limit(10).list(),
-            [0, 1, 2])
-
-    def test_iterates_lazily(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).limit(3)
-        self.assertEqual(iterations, [])
-
-    def test_does_not_consume_beyond_limit(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).limit(2).drain()
-        self.assertEqual(iterations, [0, 1])
-
-    def test_limiting_to_zero_produces_empty_stream(self):
-        self.assertEqual(Stream(range(5)).limit(0).list(), [])
-
-    def test_raises_TypeError_if_limit_is_not_integer(self):
-        self.assertRaises(TypeError, Stream(range(5)).limit, None)
-        self.assertRaises(TypeError, Stream(range(5)).limit, '5')
-        self.assertRaises(TypeError, Stream(range(5)).limit, [1])
-
-    def test_raises_ValueError_if_limit_is_negative(self):
-        self.assertRaises(ValueError, Stream(range(5)).limit, -1)
 
 
 class TestUntilValue(TestCase):
