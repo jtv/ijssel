@@ -14,13 +14,13 @@ __all__ = [
 import functools
 from itertools import (
     chain,
+    islice,
     takewhile,
     )
 import os.path
 
 from .util import (
     bind_kwargs,
-    head,
     identity,
     ifilter,
     ifilterfalse,
@@ -240,7 +240,7 @@ class Stream:
             raise TypeError("Stream.limit takes an integer; got '%s'." % limit)
         if limit < 0:
             raise ValueError("Stream.limit got negative limit: %s." % limit)
-        return self._clone(head(self.iterable, limit))
+        return self._clone(islice(self.iterable, limit))
 
     def until_value(self, sentinel):
         """Iterate items until an item equals sentinel.

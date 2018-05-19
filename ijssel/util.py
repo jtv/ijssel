@@ -9,7 +9,6 @@ from __future__ import (
 __metaclass__ = type
 __all__ = [
     'bind_kwargs',
-    'head',
     'identity',
     'ifilter',
     'ifilterfalse',
@@ -72,21 +71,6 @@ def identity(arg):
 def negate(arg):
     """Return the Boolean negation of arg."""
     return not arg
-
-
-def head(iterable, limit):
-    """Iterate over at most the first limit items in iterable."""
-    sentinel = object()
-    iterator = iter(iterable)
-    count = 0
-    item = None
-    while count < limit:
-        item = next(iterator, sentinel)
-        if item is sentinel:
-            count = limit
-        else:
-            yield item
-            count += 1
 
 
 def scan_until(iterable, criterion):
