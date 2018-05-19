@@ -15,6 +15,7 @@ import functools
 from itertools import (
     chain,
     islice,
+    starmap,
     takewhile,
     )
 import os.path
@@ -205,6 +206,17 @@ class Stream:
         :return: Stream.
         """
         return self._clone(imap(bind_kwargs(function, kwargs), self.iterable))
+
+    def starmap(self, function, kwargs=None):
+        """Like map, but each item is a series of arguments.
+
+        Each item should be a list, tuple, or other sequence.  Replaces each
+        item with the result of `function(*item)`.
+
+        :return: Stream.
+        """
+        return self._clone(
+            starmap(bind_kwargs(function, kwargs), self.iterable))
 
     def catch(self, function, kwargs=None):
         """Iterate exceptions raised by `function(item)` for each item.

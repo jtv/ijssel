@@ -115,7 +115,7 @@ class TestIteration(TestCase):
         self.assertRaises(TypeError, list, Stream(None))
         self.assertRaises(TypeError, list, Stream(10))
 
-    def test_evaluates_lazily(self):
+    def test_iterates_lazily(self):
         iterations = []
         sequence = iter(Stream(generate(range(5), iterations)))
         self.assertEqual(iterations, [])
@@ -237,7 +237,7 @@ class TestNegate(TestCase):
         falses = [False, 0, '', [], {}]
         self.assertEqual(Stream(falses).negate().list(), [True] * len(falses))
 
-    def test_consumes_lazily(self):
+    def test_iterates_lazily(self):
         iterations = []
         Stream(generate([1, 2], iterations)).negate()
         self.assertEqual(iterations, [])
@@ -419,6 +419,54 @@ class TestMap(TestCase):
             stream.map(function).drain)
         self.assertEqual(iterations, [1, 2, 3])
         self.assertEqual(stream.list(), [4, 5])
+
+
+class TestStarMap(TestCase):
+    """Tests for `starmap`."""
+    def test_does_nothing_if_empty(self):
+        processed = []
+        result = Stream().starmap(recorder(processed)).list()
+        self.assertEqual(result, [])
+        self.assertEqual(processed, [])
+
+    def test_expands_argument_tuple(self):
+        processed = []
+        inputs = [(1,), (2,), (3,)]
+        result = Stream(inputs).starmap(recorder(processed)).list()
+        self.assertEqual(result, [1, 2, 3])
+        self.assertEqual(processed, [1, 2, 3])
+
+    def test_expands_argument_list(self):
+        processed = []
+        inputs = [[1], [2], [3]]
+        result = Stream(inputs).starmap(recorder(processed)).list()
+        self.assertEqual(result, [1, 2, 3])
+        self.assertEqual(processed, [1, 2, 3])
+
+    def test_expands_any_number_of_arguments(self):
+        process = lambda *args: '/'.join('%s' % arg for arg in args)
+        inputs = [
+            (9, 8, 7),
+            (0,),
+            [],
+            ]
+        self.assertEqual(
+            Stream(inputs).starmap(process).list(),
+            ['9/8/7', '0', ''])
+
+    def test_iterates_lazily(self):
+        processed = []
+        inputs = [[randint(0, 10)] for _ in range(randint(1, 10))]
+        Stream(inputs).starmap(recorder(processed))
+        self.assertEqual(processed, [])
+
+    def test_passes_kwargs(self):
+        args = []
+        arg = randint(0, 10)
+        inputs = [[randint(0, 10)] for _ in range(randint(1, 10))]
+        stream = Stream(inputs)
+        stream.starmap(kwargs_recorder(args), kwargs={'guh': arg}).drain()
+        self.assertEqual(args, [{'guh': arg}] * len(inputs))
 
 
 class TestCatch(TestCase):
