@@ -7,7 +7,12 @@ from __future__ import (
     )
 
 from .main import Stream
+from .util import identity
 
+__all__ = [
+    'identity',
+    'Stream',
+    ]
 
 # Suppress lint warnings about unused symbols.
-_ = Stream
+_ = identity, Stream
