@@ -36,8 +36,7 @@ And you saw that right: _IJssel,_ not _Ijssel._  The "IJ" is basically the
 Dutch version of "Y", so think _Yssel._  If you pronounce it Ice-sel you'll be
 close enough.
 
-Unicode also has a ligature for that combo: Ĳssel.  That way it's 5
-characters, not 6.
+Unicode also has a ligature for that combo: Ĳssel.  It's 5 characters, not 6.
 
 
 Platform
@@ -45,7 +44,7 @@ Platform
 
 Works in Python 2.7, 3.6, and pypy.  This will evolve.
 
-Should work on any operating system, as long as it's running a supported Python
+Should work on any operating system, as long as it's on a supported Python
 version.
 
 External dependencies: minimal.  It'll probably require `six` at some point.
