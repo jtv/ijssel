@@ -248,7 +248,7 @@ class Stream:
         :return: Stream.
         """
         return self._clone(
-            scan_until(self.iterable, lambda item: item == sentinel))
+            takewhile(lambda item: not (item == sentinel), self.iterable))
 
     def until_identity(self, sentinel):
         """Iterate items until until an item is the sentinel object.
@@ -256,7 +256,7 @@ class Stream:
         :return: Stream.
         """
         return self._clone(
-            scan_until(self.iterable, lambda item: item is sentinel))
+            takewhile(lambda item: item is not sentinel, self.iterable))
 
     def until_true(self, criterion, kwargs=None):
         """Stop iterating when criterion(item) is true.
