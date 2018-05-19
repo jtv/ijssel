@@ -1,6 +1,9 @@
 # Vim swap files.
 **/.*.swp
 
+# Generated documentation.
+doc/pydoc/*.html
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
