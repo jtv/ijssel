@@ -202,6 +202,18 @@ class TestGetItemSlice(TestCase):
         self.assertEqual(iterations, [0, 1, 2])
 
 
+class TestApply(TestCase):
+    """Tests for `apply`."""
+    def test_returns_stream(self):
+        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        self.assertTrue(isinstance(Stream(inputs).apply(list), Stream))
+
+    def test_applies_function_to_iterable(self):
+        self.assertEqual(
+            Stream("Hello").apply(enumerate).list(),
+            [(0, 'H'), (1, 'e'), (2, 'l'), (3, 'l'), (4, 'o')])
+
+
 class TestList(TestCase):
     """Tests for `list`."""
     def test_returns_empty_for_empty_stream(self):
