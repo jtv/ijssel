@@ -17,7 +17,6 @@ from ..ijssel.util import (
 #    ifilter,
 #    imap,
     int_types,
-#    negate,
     )
 
 

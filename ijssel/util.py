@@ -14,8 +14,6 @@ __all__ = [
     'ifilterfalse',
     'imap',
     'int_types',
-    'negate',
-    'scan_until',
     'uniq',
     ]
 
@@ -66,23 +64,6 @@ def bind_kwargs(function, kwargs=None):
 def identity(arg):
     """Return arg."""
     return arg
-
-
-def negate(arg):
-    """Return the Boolean negation of arg."""
-    return not arg
-
-
-def scan_until(iterable, criterion):
-    """Iterate over iterable until criterion(item) is true."""
-    sentinel = object()
-    iterator = iter(iterable)
-    item = next(iterator, sentinel)
-    while item is not sentinel:
-        if criterion(item):
-            return
-        yield item
-        item = next(iterator, sentinel)
 
 
 def uniq(iterable, key):

@@ -8,7 +8,6 @@ from __future__ import (
 
 __metaclass__ = type
 
-from collections import OrderedDict
 import os.path
 from random import randint
 from unittest import TestCase
@@ -220,173 +219,6 @@ class TestList(TestCase):
             yield item
 
         self.assertEqual(Stream(iterate()).list(), [item])
-
-
-class TestTuple(TestCase):
-    """Tests for `tuple`."""
-    def test_returns_empty_for_empty_stream(self):
-        empty = Stream().tuple()
-        self.assertEqual(empty, tuple())
-        self.assertIs(type(empty), tuple)
-
-    def test_returns_items_as_tuple(self):
-        self.assertEqual(Stream(range(3)).tuple(), (0, 1, 2))
-
-    def test_turns_generator_into_tuple(self):
-        item = randint(0, 10)
-
-        def iterate():
-            yield item
-
-        self.assertEqual(Stream(iterate()).tuple(), tuple([item]))
-
-
-class TestSet(TestCase):
-    """Tests for `set`."""
-    def test_returns_empty_for_empty_stream(self):
-        empty = Stream().set()
-        self.assertEqual(empty, set())
-        self.assertEqual(type(empty), set)
-
-    def test_returns_items_as_set(self):
-        self.assertEqual(Stream([0, 1, 2, 0, 2, 1]).set(), set([0, 1, 2]))
-
-    def test_turns_generator_into_set(self):
-        item = randint(0, 10)
-
-        def iterate():
-            yield item
-
-        self.assertEqual(Stream(iterate()).set(), {item})
-
-
-class TestDict(TestCase):
-    """Tests for `dict`."""
-    def test_returns_empty_for_empty_stream(self):
-        empty = Stream().dict()
-        self.assertEqual(empty, {})
-        self.assertEqual(type(empty), dict)
-
-    def test_returns_items_as_set(self):
-        self.assertEqual(
-            Stream([(1, 2), (2, 4), (3, 6)]).dict(),
-            {
-                1: 2,
-                2: 4,
-                3: 6,
-            })
-
-    def test_turns_generator_into_set(self):
-        key = randint(0, 10)
-        value = randint(0, 10)
-
-        def iterate():
-            yield (key, value)
-
-        self.assertEqual(Stream(iterate()).dict(), {key: value})
-
-
-class TestOrderedDict(TestCase):
-    """Tests for `ordered_dict`."""
-    def test_returns_empty_for_empty_stream(self):
-        empty = Stream().ordered_dict()
-        self.assertEqual(empty, OrderedDict())
-        self.assertEqual(type(empty), OrderedDict)
-
-    def test_returns_items_as_set(self):
-        inputs = [(9, 18), (2, 4), (3, 6)]
-        self.assertEqual(
-            Stream(inputs).ordered_dict(),
-            OrderedDict(inputs))
-
-    def test_turns_generator_into_set(self):
-        key = randint(0, 10)
-        value = randint(0, 10)
-
-        def iterate():
-            yield (key, value)
-
-        self.assertEqual(
-            Stream(iterate()).ordered_dict(),
-            OrderedDict([(key, value)]))
-
-
-class TestAll(TestCase):
-    """Tests for `all`."""
-    def test_returns_True_for_empty_stream(self):
-        self.assertTrue(Stream().all())
-
-    def test_returns_True_if_all_items_true(self):
-        trues = [True, 1, 'y', [0], {0: 0}]
-        self.assertTrue(Stream(trues).all())
-
-    def test_returns_False_if_any_item_false(self):
-        self.assertFalse(Stream([True, True, False]).all())
-
-    def test_consumes_all_if_True(self):
-        trues = [True] * randint(0, 5)
-        iterations = []
-        Stream(generate(trues, iterations)).all()
-        self.assertEqual(iterations, trues)
-
-    def test_stops_early_if_False(self):
-        bools = [True] * randint(0, 3) + [False] + [True] * randint(0, 3)
-        iterations = []
-        Stream(generate(bools, iterations)).all()
-        self.assertNotEqual(iterations, [])
-        self.assertFalse(iterations[-1])
-        self.assertEqual(iterations, bools[:len(iterations)])
-        self.assertEqual(len(iterations), iterations.index(False) + 1)
-
-
-class TestAny(TestCase):
-    """Tests for `any`."""
-    def test_returns_False_for_empty_stream(self):
-        self.assertFalse(Stream().any())
-
-    def test_returns_False_if_all_items_true(self):
-        falses = [False, 0, '', [], {}]
-        self.assertFalse(Stream(falses).any())
-
-    def test_returns_True_if_any_item_true(self):
-        self.assertTrue(Stream([False, False, True]).any())
-
-    def test_consumes_all_if_False(self):
-        falses = [False] * randint(0, 5)
-        iterations = []
-        Stream(generate(falses, iterations)).any()
-        self.assertEqual(iterations, falses)
-
-    def test_stops_early_if_True(self):
-        bools = [False] * randint(0, 3) + [True] + [False] * randint(0, 3)
-        iterations = []
-        Stream(generate(bools, iterations)).any()
-        self.assertNotEqual(iterations, [])
-        self.assertTrue(iterations[-1])
-        self.assertEqual(iterations, bools[:len(iterations)])
-        self.assertEqual(len(iterations), iterations.index(True) + 1)
-
-
-class TestNegate(TestCase):
-    """Tests for `negate`."""
-    def test_returns_Stream(self):
-        self.assertIsInstance(Stream([1]).negate(), Stream)
-
-    def test_does_nothing_if_empty(self):
-        self.assertEqual(Stream().negate().list(), [])
-
-    def test_negates_true_items_to_False(self):
-        trues = [True, 1, 'y', [0], {0: 0}]
-        self.assertEqual(Stream(trues).negate().list(), [False] * len(trues))
-
-    def test_negates_false_items_to_True(self):
-        falses = [False, 0, '', [], {}]
-        self.assertEqual(Stream(falses).negate().list(), [True] * len(falses))
-
-    def test_lazy(self):
-        iterations = []
-        Stream(generate([1, 2], iterations)).negate()
-        self.assertEqual(iterations, [])
 
 
 class TestCount(TestCase):
@@ -686,123 +518,30 @@ class TestCatch(TestCase):
             [type(None), SimulatedFailure, type(None), ValueError])
 
 
-class TestUntilValue(TestCase):
-    """Tests for `until_value`."""
-    def test_stops_at_sentinel(self):
-        self.assertEqual(Stream(range(5)).until_value(3).list(), [0, 1, 2])
-
-    def test_stops_normally_if_sentinel_not_found(self):
-        self.assertEqual(
-            Stream(range(5)).until_value(9).list(),
-            [0, 1, 2, 3, 4])
-
-    def test_checks_value_not_identity(self):
-        self.assertEqual(
-            Stream([[0], [1], [2], [3]]).until_value([2]).list(),
-            [[0], [1]])
-
-    def test_does_not_consume_beyond_sentinel(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).until_value(2).drain()
-        self.assertEqual(iterations, [0, 1, 2])
-
-    def test_iterates_lazily(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).until_value(2)
-        self.assertEqual(iterations, [])
-
-
-class TestUntilIdentity(TestCase):
-    """Tests for `until_identity`."""
-    def test_stops_at_sentinel(self):
-        stop = object()
-        self.assertEqual(
-            Stream([0, 1, stop, 3]).until_identity(stop).list(),
-            [0, 1])
-
-    def test_stops_normally_if_sentinel_not_found(self):
-        self.assertEqual(
-            Stream(range(5)).until_identity(9).list(),
-            [0, 1, 2, 3, 4])
-
-    def test_checks_identity_not_value(self):
-        self.assertEqual(
-            Stream([[0], [1], [2], [3]]).until_identity([2]).list(),
-            [[0], [1], [2], [3]])
-
-    def test_does_not_consume_beyond_sentinel(self):
-        stop = object()
-        iterations = []
-        stream = Stream(generate([0, 1, stop, 2], iterations))
-        stream.until_identity(stop).drain()
-        self.assertEqual(iterations, [0, 1, stop])
-
-    def test_iterates_lazily(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).until_identity(2)
-        self.assertEqual(iterations, [])
-
-
-class TestUntilTrue(TestCase):
-    """Tests for `until_true`."""
-    def test_stops_when_condition_met(self):
-        many = lambda item: item > 1
-        self.assertEqual(
-            Stream([0, 1, 2, 3]).until_true(many).list(),
-            [0, 1])
-
-    def test_stops_normally_if_condition_never_met(self):
-        huge = lambda item: item > 10
-        self.assertEqual(
-            Stream(range(5)).until_true(huge).list(),
-            [0, 1, 2, 3, 4])
-
-    def test_does_not_consume_beyond_sentinel(self):
-        iterations = []
-        many = lambda item: item > 1
-        stream = Stream(generate(range(5), iterations))
-        stream.until_true(many).drain()
-        self.assertEqual(iterations, [0, 1, 2])
-
-    def test_iterates_lazily(self):
-        iterations = []
-        Stream(generate(range(5), iterations)).until_true()
-        self.assertEqual(iterations, [])
-
-    def test_adds_kwargs(self):
-        args = []
-        check = kwargs_recorder(args, lambda item: False)
-        arg = randint(0, 10)
-        length = randint(1, 5)
-        Stream(range(length)).until_true(check, kwargs={'kwarg': arg}).drain()
-
-        self.assertEqual(args, [{'kwarg': arg}] * length)
-
-
-class TestWhileTrue(TestCase):
+class TestTakeWhile(TestCase):
     """Tests for `while_true`."""
     def test_stops_when_condition_no_longer_met(self):
         few = lambda item: item < 2
         self.assertEqual(
-            Stream([0, 1, 2, 3]).while_true(few).list(),
+            Stream([0, 1, 2, 3]).take_while(few).list(),
             [0, 1])
 
     def test_stops_normally_if_condition_never_met(self):
         reasonable = lambda item: item < 10
         self.assertEqual(
-            Stream(range(5)).while_true(reasonable).list(),
+            Stream(range(5)).take_while(reasonable).list(),
             [0, 1, 2, 3, 4])
 
     def test_does_not_consume_beyond_sentinel(self):
         iterations = []
         few = lambda item: item < 2
         stream = Stream(generate(range(5), iterations))
-        stream.while_true(few).drain()
+        stream.take_while(few).drain()
         self.assertEqual(iterations, [0, 1, 2])
 
     def test_iterates_lazily(self):
         iterations = []
-        Stream(generate(range(5), iterations)).while_true(
+        Stream(generate(range(5), iterations)).take_while(
             lambda item: not item)
         self.assertEqual(iterations, [])
 
@@ -811,7 +550,7 @@ class TestWhileTrue(TestCase):
         check = kwargs_recorder(args, lambda item: True)
         arg = randint(0, 10)
         length = randint(1, 5)
-        Stream(range(length)).while_true(check, kwargs={'kwarg': arg}).drain()
+        Stream(range(length)).take_while(check, kwargs={'kwarg': arg}).drain()
         self.assertEqual(args, [{'kwarg': arg}] * length)
 
 

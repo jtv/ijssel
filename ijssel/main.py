@@ -11,7 +11,6 @@ __all__ = [
     'Stream',
     ]
 
-from collections import OrderedDict
 import functools
 from itertools import (
     chain,
@@ -28,14 +27,13 @@ from .util import (
     ifilterfalse,
     imap,
     int_types,
-    negate,
-    scan_until,
     uniq,
     )
 
 
-# TODO: What happens to original when you iterate a modified stream?
-# TODO: What's a good, extensible way to generalise e.g. averages and medians?
+# TODO: Document how map/reduce can combine to compute e.g. averages.
+# TODO: How to support parallelism?
+# TODO: Document: What happens to original when you iterate a modified stream?
 # TODO: next?  Repeatable slicing?
 
 class Stream:
@@ -79,7 +77,18 @@ class Stream:
 
         stream.map(sorted, {'reverse': True})
     """
-    def __init__(self, iterable=()):
+    def __init__(self, iterable=(), based_on=None):
+        """Initialise a new stream.
+
+        :param iterable: Anything that can be iterated: a list, a generator,
+            a set, a range, a view, a string.
+        :param based_on: Optional original stream on which the new one is
+            based.  Normally only used from within the `Stream` class, or in
+            classes derived from it.
+        """
+        # We don't actually use based_on yet.  But having it in the base class
+        # will make it easier for derived classes to pass additional
+        # attributes down chained streams.
         self.iterable = iterable
 
     def __iter__(self):
@@ -101,7 +110,7 @@ class Stream:
         """
         if isinstance(index, slice):
             start, stop, step = index.start, index.stop, index.step
-            return self._clone(islice(self.iterable, start, stop, step))
+            return self.evolve(islice(self.iterable, start, stop, step))
         elif isinstance(index, int_types):
             if index < 0:
                 raise IndexError("Negative index not supported: %d." % index)
@@ -111,90 +120,59 @@ class Stream:
             raise TypeError(
                 "Invalid type for Stream indexing/slicing: '%s'." % index)
 
-    def _clone(self, iterable):
+    def evolve(self, iterable):
         """Create a new instance based on the current one.
 
-        This is here to support subclassing, where existing nonterminal
-        methods when called on a derived class can return an instance of the
-        derived class, rather than of Stream.
+        You won't need this in normal use.  If you want to derive your own
+        stream class from `Stream`, you may need to override it to pass more
+        information from the "original" stream to the "evolved" one.
         """
         return type(self)(iterable)
 
+    def into(self, callee, kwargs=None):
+        """Invoke `callee` on the stream's iterable as a whole, return result.
+
+        Use this to call a function or instantiate a class, passing the stream
+        as an iterable argument.
+
+        Example: `stream.into(list)` returns the stream's contents as a `list`.
+        It's a more "fluent" way of saying `list(stream)`.
+
+        Terminal.
+
+        :return: Whatever callee returns.
+        """
+        call = bind_kwargs(callee, kwargs)
+        return call(self.iterable)
+
+    def apply(self, callee, kwargs=None):
+        """Apply callee to iterable, wrap result as new stream.
+
+        Example: `stream.apply(enumerate)` returns a new stream which applies
+        `enumerate` to `stream`.
+
+        Example: `stream.apply(sorted)` reads the entier stream into memory
+        and returns it as a stream.
+
+        (Unfortunately some standard-library functions take another argument
+        before the iterable, and don't accept keyword arguments.  In those
+        cases, apply() doesn't do the job, and the stream class will need to
+        call `self.evolve(callee(...))` itself.)
+
+        Terminal, if `callee` reads the items in the stream.
+        """
+        return self.evolve(self.into(callee, kwargs))
+
     def list(self):
         """Return all items as a list.
+
+        Shorthand for `self.into(list)`.
 
         Terminal.
 
         :return: list.
         """
-        return list(self.iterable)
-
-    def tuple(self):
-        """Return all items as a tuple.
-
-        Terminal.
-
-        :return: tuple.
-        """
-        return tuple(self.iterable)
-
-    def set(self):
-        """Return all items as a set.
-
-        Terminal.
-
-        :return: set.
-        """
-        return set(self.iterable)
-
-    def dict(self):
-        """Return all items as a dict.  Each item must be a key/value pair.
-
-        Terminal.
-
-        :return: dict.
-        """
-        return dict(self.iterable)
-
-    def ordered_dict(self):
-        """Return items as an OrderedDict.  Each item must be a key/value pair.
-
-        Terminal.
-
-        :return: OrderedDict.
-        """
-        return OrderedDict(self.iterable)
-
-    def all(self):
-        """Return bool: Is each item true?
-
-        If there are no items, then the answer is True.
-
-        Terminal.  But, if there is a false item, stops right after consuming
-        that item.
-
-        :return: bool.
-        """
-        return all(self.iterable)
-
-    def any(self):
-        """Return bool: Is any item true?
-
-        If there are no items, then the answer is False.
-
-        Terminal.  But, if there is a true item, stops right after consuming
-        that item.
-
-        :return: bool.
-        """
-        return any(self.iterable)
-
-    def negate(self):
-        """Logically negate each item.
-
-        :return: Stream.
-        """
-        return self.map(negate)
+        return self.into(list)
 
     def count(self):
         """Return number of items.
@@ -223,6 +201,8 @@ class Stream:
     def for_each(self, function, kwargs=None):
         """Execute function(item) for each item.
 
+        You could also write this as `self.map(function, kwargs).drain()`.
+
         Terminal.
         """
         call = bind_kwargs(function, kwargs)
@@ -231,6 +211,8 @@ class Stream:
 
     def drain(self):
         """Consume all items.
+
+        You could also write this as `self.for_each(lambda x: None)`.
 
         Terminal.
         """
@@ -242,7 +224,7 @@ class Stream:
 
         :return: Stream.
         """
-        return self._clone(
+        return self.evolve(
             ifilter(bind_kwargs(criterion, kwargs), self.iterable))
 
     def filter_out(self, criterion=identity, kwargs=None):
@@ -250,7 +232,7 @@ class Stream:
 
         :return: Stream.
         """
-        return self._clone(
+        return self.evolve(
             ifilterfalse(bind_kwargs(criterion, kwargs), self.iterable))
 
     def map(self, function, kwargs=None):
@@ -258,7 +240,7 @@ class Stream:
 
         :return: Stream.
         """
-        return self._clone(imap(bind_kwargs(function, kwargs), self.iterable))
+        return self.evolve(imap(bind_kwargs(function, kwargs), self.iterable))
 
     def starmap(self, function, kwargs=None):
         """Like map, but each item is a series of arguments.
@@ -268,7 +250,7 @@ class Stream:
 
         :return: Stream.
         """
-        return self._clone(
+        return self.evolve(
             starmap(bind_kwargs(function, kwargs), self.iterable))
 
     def catch(self, function, kwargs=None):
@@ -294,36 +276,12 @@ class Stream:
 
         return self.map(handle)
 
-    def until_value(self, sentinel):
-        """Iterate items until an item equals sentinel.
+    def take_while(self, criterion=identity, kwargs=None):
+        """Stop iterating when `criterion(item)` is false.
 
         :return: Stream.
         """
-        return self._clone(
-            takewhile(lambda item: not (item == sentinel), self.iterable))
-
-    def until_identity(self, sentinel):
-        """Iterate items until until an item is the sentinel object.
-
-        :return: Stream.
-        """
-        return self._clone(
-            takewhile(lambda item: item is not sentinel, self.iterable))
-
-    def until_true(self, criterion=identity, kwargs=None):
-        """Stop iterating when criterion(item) is true.
-
-        :return: Stream.
-        """
-        return self._clone(
-            scan_until(self.iterable, bind_kwargs(criterion, kwargs)))
-
-    def while_true(self, criterion=identity, kwargs=None):
-        """Stop iterating when criterion(item) is false.
-
-        :return: Stream.
-        """
-        return self._clone(
+        return self.evolve(
             takewhile(bind_kwargs(criterion, kwargs), self.iterable))
 
     def concat(self):
@@ -331,7 +289,7 @@ class Stream:
 
         :return: Stream.
         """
-        return self._clone(chain.from_iterable(self.iterable))
+        return self.apply(chain.from_iterable)
 
     def group(self, key=identity, key_kwargs=None, value=identity,
               val_kwargs=None):
@@ -363,8 +321,21 @@ class Stream:
     def sum(self, initial=0):
         """Add up all elements, starting with initial value.
 
+        Shorthand for `self.reduce((lambda l, r: l + r), initial)`.
+
         Try not to use this on strings.  For that special case, `join` will be
         faster.
+
+        If you're adding floating-point numbers and precision is important to
+        your application, simply summing numbers in an arbitrary order may not
+        produce the most accurate results.  In floating-point arithmetic,
+        adding a very small number to a very large number may not have any
+        effect.  So if your stream starts with a very large number, followed by
+        a long series of numbers very close to zero, then the near-zero numbers
+        may not show up in the result.  For more accurate results you may need
+        to sort the numbers in ascending order first, so that the smaller
+        numbers build up into a larger one before it gets added to the huge
+        number.
 
         Terminal.
 
@@ -400,7 +371,7 @@ class Stream:
         in the stream, the resulting stream will only contain the first of
         those items.  The other items with the same key are filtered out.
         """
-        return self._clone(uniq(self, bind_kwargs(key, kwargs)))
+        return self.apply(uniq, {'key': bind_kwargs(key, kwargs)})
 
     def peek(self, function, kwargs=None):
         """Pass on each item unchanged, but also, run function on it.
@@ -419,7 +390,8 @@ class Stream:
     def string_join(self, sep=''):
         """Perform a string join on all items, separated by sep.
 
-        Calls `sep.join(...)` on all items.
+        Calls `sep.join(...)` on all items.  Other ways to write this would
+        be `self.into(sep.join)` or `sep.join(self)`.
 
         Terminal.
         """
@@ -446,4 +418,4 @@ class Stream:
         :param key: Compute key by which elements should be sorted.
         :return: Stream.
         """
-        return self._clone(sorted(self, key=bind_kwargs(key, kwargs)))
+        return self.apply(sorted, {'key': bind_kwargs(key, kwargs)})
