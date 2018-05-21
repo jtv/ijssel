@@ -148,8 +148,14 @@ class Stream:
     def apply(self, callee, kwargs=None):
         """Apply callee to iterable, wrap result as new stream.
 
+        The `callee` must be something callable (a function, a class, etc.)
+        which takes an iterable as its argument and returns another iterable.
+        Of course you can also add keyword arguments through `kwargs`.
+
         Example: `stream.apply(enumerate)` returns a new stream which applies
-        `enumerate` to `stream`.
+        `enumerate` to `stream`.  It will yield tuples of `(number, item)`
+        where `number` is an increasing number starting at 0, and `item` is the
+        corresponding item from the original stream.
 
         Example: `stream.apply(sorted)` reads the entier stream into memory
         and returns it as a stream.

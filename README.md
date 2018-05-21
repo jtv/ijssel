@@ -6,7 +6,7 @@ Stream library for Python.
 This is meant to be "a bit like Java streams," but simpler.  It lets you do
 similar things: map, filter, count, reduce, and so on, in a "fluent" style.
 
-In standard Python you might write:
+Without IJssel you might write:
 
     greater_than_10 = lambda value: value > 10
     big_counts = list(filter(greater_than_10, map(count, items)))
