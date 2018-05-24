@@ -1,17 +1,18 @@
 IJssel
 ======
 
-Stream library for Python.
+"Fluent" streams library for Python.
 
-This is meant to be "a bit like Java streams," but simpler.  It lets you do
-similar things: map, filter, count, reduce, and so on, in a "fluent" style.
+IJssel gives you something like Java's streams library, but simpler.  It lets
+you do similar things: map, filter, count, reduce, and so on, in a "fluent"
+style.
 
 Without IJssel you might write:
 
     greater_than_10 = lambda value: value > 10
     big_counts = list(filter(greater_than_10, map(count, items)))
 
-But some prefer it more like:
+But some people prefer it more like:
 
     greater_than = lambda value, threshold: value > threshold
     big_counts = (
