@@ -32,10 +32,8 @@ from .util import (
 
 
 # TODO: Document how map/reduce can combine to compute e.g. averages.
-# TODO: How to support parallelism?
 # TODO: Document: What happens to original when you iterate a modified stream?
 # TODO: Repeatable slicing?
-# TODO: find, find_all.
 
 class Stream:
     """Stream class.
