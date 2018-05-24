@@ -9,6 +9,7 @@ from __future__ import (
 __metaclass__ = type
 
 from io import StringIO
+from itertools import count
 from operator import methodcaller
 import os.path
 from random import randint
@@ -203,6 +204,45 @@ class TestGetItemSlice(TestCase):
         iterations = []
         Stream(generate(range(5), iterations))[:3].drain()
         self.assertEqual(iterations, [0, 1, 2])
+
+
+class TestAdd(TestCase):
+    """Tests for stream addition."""
+    def test_returns_stream(self):
+        self.assertEqual(type(Stream() + Stream()), Stream)
+
+    def test_empty_stream_adds_nothing(self):
+        self.assertEqual((Stream([1, 2]) + Stream()).list(), [1, 2])
+        self.assertEqual((Stream() + Stream([1, 2])).list(), [1, 2])
+
+    def test_adds_multiple_streams(self):
+        self.assertEqual(
+            (Stream([1]) + Stream([2]) + Stream([3])).list(),
+            [1, 2, 3])
+
+    def test_adds_container_to_stream(self):
+        combined = Stream([1]) + [2]
+        self.assertEqual(type(combined), Stream)
+        self.assertEqual(combined.list(), [1, 2])
+
+    def test_adds_generator_to_stream(self):
+        def generate(start, stop):
+            for item in range(start, stop):
+                yield item
+
+        combined = Stream([1, 2]) + generate(3, 5)
+        self.assertEqual(type(combined), Stream)
+        self.assertEqual(combined.list(), [1, 2, 3, 4])
+
+    def test_lazy(self):
+        iterations = []
+        combined = (
+            Stream(generate(range(0, 3), iterations)) +
+            Stream(generate(range(3, 6), iterations))
+            )
+        middle = combined[2:4].list()
+        self.assertEqual(middle, [2, 3])
+        self.assertEqual(iterations, [0, 1, 2, 3])
 
 
 class TestApply(TestCase):
@@ -583,12 +623,12 @@ class TestConcat(TestCase):
             [1, 2, 3, 4])
 
     def test_concatenates_iterators(self):
-        def count(start, end):
+        def iterate(start, end):
             for item in range(start, end):
                 yield item
 
         self.assertEqual(
-            Stream([count(0, 2), count(2, 4)]).concat().list(),
+            Stream([iterate(0, 2), iterate(2, 4)]).concat().list(),
             [0, 1, 2, 3])
 
     def test_concatenates_strings(self):
@@ -840,7 +880,7 @@ class TestSort(TestCase):
         self.assertEqual(args, [{'x': arg}] * len(inputs))
 
 
-def count(sequence):
+def count_items(sequence):
     """Return number of items in sequence."""
     total = 0
     for _ in sequence:
@@ -851,6 +891,7 @@ def count(sequence):
 class TestIntegrate(TestCase):
     """Some scenario tests for `Stream`."""
     def test_filter_lengths_greater_than_3(self):
+        # Example from README.md.
         greater_than = lambda value, threshold: value > threshold
         long_items = (Stream([
                 [0, 1, 2, 3],
@@ -858,7 +899,7 @@ class TestIntegrate(TestCase):
                 [4, 3, 2, 1, 0],
                 [0, 1],
                 ])
-            .map(count)
+            .map(count_items)
             .filter(greater_than, {'threshold': 3})
             .list()
             )
@@ -871,6 +912,7 @@ class TestIntegrate(TestCase):
             42)
 
     def test_sort_uniq_count(self):
+        # Example from README.md.
         lines = StringIO(dedent("""\
             Gallia est omnis divisa in partes tres..."
             Cui bono?
@@ -934,3 +976,27 @@ class TestIntegrate(TestCase):
                     ).values()
                 ).concat().concat().sum(),
             total)
+
+
+class JavaRecipesTest(TestCase):
+    """Tests for recipes to reproduce Java stream methods."""
+    def test_flatMap_splits_lines_into_words(self):
+        # Example from README.md.  Based on Java Stream.flatMap documentation.
+        lines = [
+            "I have seen things you people wouldn't believe.",
+            "Attack ships on fire off the shoulder of Orion.",
+            "I watched C-beams glitter in the dark off the Tannhauser Gate.",
+            "All those moments will be lost...",
+            "Like tears in rain.",
+            "Time to die.",
+            ]
+        words = Stream(lines).map(methodcaller('split')).concat().list()
+        self.assertEqual(words, ' '.join(lines).split())
+
+    def test_max_returns_max_number(self):
+        self.assertEqual(Stream([3, 2, 1, 99, 0, 5, 4, 3]).into(max), 99)
+
+    def test_generate_is_count(self):
+        # Examples from README.md.
+        self.assertEqual(Stream(count())[0:5].list(), [0, 1, 2, 3, 4])
+        self.assertEqual(Stream(count(1, 2))[0:5].list(), [1, 3, 5, 7, 9])

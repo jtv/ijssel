@@ -34,7 +34,8 @@ from .util import (
 # TODO: Document how map/reduce can combine to compute e.g. averages.
 # TODO: How to support parallelism?
 # TODO: Document: What happens to original when you iterate a modified stream?
-# TODO: next?  Repeatable slicing?
+# TODO: Repeatable slicing?
+# TODO: find, find_all.
 
 class Stream:
     """Stream class.
@@ -119,6 +120,10 @@ class Stream:
         else:
             raise TypeError(
                 "Invalid type for Stream indexing/slicing: '%s'." % index)
+
+    def __add__(self, iterable):
+        """Combine self and other iterable into a single stream."""
+        return self.evolve(chain(self.iterable, iterable))
 
     def evolve(self, iterable):
         """Create a new instance based on the current one.
