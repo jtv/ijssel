@@ -8,8 +8,11 @@ from __future__ import (
 
 __metaclass__ = type
 
+from io import StringIO
+from operator import methodcaller
 import os.path
 from random import randint
+from textwrap import dedent
 from unittest import TestCase
 
 from ..ijssel import Stream
@@ -835,3 +838,99 @@ class TestSort(TestCase):
         inputs = [randint(0, 10) for _ in range(randint(1, 10))]
         Stream(inputs).sort(kwargs_recorder(args), kwargs={'x': arg}).drain()
         self.assertEqual(args, [{'x': arg}] * len(inputs))
+
+
+def count(sequence):
+    """Return number of items in sequence."""
+    total = 0
+    for _ in sequence:
+        total += 1
+    return total
+
+
+class TestIntegrate(TestCase):
+    """Some scenario tests for `Stream`."""
+    def test_filter_lengths_greater_than_3(self):
+        greater_than = lambda value, threshold: value > threshold
+        long_items = (Stream([
+                [0, 1, 2, 3],
+                [3, 2, 1],
+                [4, 3, 2, 1, 0],
+                [0, 1],
+                ])
+            .map(count)
+            .filter(greater_than, {'threshold': 3})
+            .list()
+            )
+        self.assertEqual(long_items, [4, 5])
+
+    def test_sum_even_numbers(self):
+        is_even = lambda number: number % 2 == 0
+        self.assertEqual(
+            Stream(range(13)).filter(is_even).sum(),
+            42)
+
+    def test_sort_uniq_count(self):
+        lines = StringIO(dedent("""\
+            Gallia est omnis divisa in partes tres..."
+            Cui bono?
+            Quidquid id est timeo danaos et dona ferentes.
+            Cui bono?
+            Sic transit gloria mundi.
+            Cui bono?
+            """))
+        lines.seek(0)
+        self.assertEqual(Stream(lines).sort().count(), 6)
+        lines.seek(0)
+        self.assertEqual(Stream(lines).sort().uniq().count(), 4)
+
+    def test_different_ways_of_summing_nested_lists(self):
+        inputs = [
+            [0, 1, 2, 3],
+            [3, 1],
+            [2, 0],
+            ]
+        total = 12
+
+        self.assertEqual(Stream(inputs).map(sum).sum(), total)
+        self.assertEqual(Stream(inputs).concat().sum(), total)
+        self.assertEqual(Stream(Stream(inputs).sum([])).sum(), total)
+        self.assertEqual(
+            Stream(inputs).reduce(
+                lambda acc, item: acc + Stream(item).sum(), 0),
+            total)
+        self.assertEqual(
+            Stream(inputs).map(Stream).map(methodcaller('sum')).sum(),
+            total)
+        self.assertEqual(
+            Stream(inputs).starmap(lambda *args: sum(args)).sum(),
+            total)
+
+        class Accumulator:
+            total = 0
+
+            def inc(self, item):
+                self.total += item
+
+        accumulator = Accumulator()
+        Stream(inputs).concat().for_each(accumulator.inc)
+        self.assertEqual(accumulator.total, total)
+
+        accumulator = Accumulator()
+        Stream(inputs).map(Stream).for_each(
+            methodcaller('for_each', function=accumulator.inc))
+        self.assertEqual(accumulator.total, total)
+
+        self.assertEqual(
+            Stream(inputs).map(Stream).map(
+                methodcaller('map', lambda item: [0] * item)
+                ).concat().concat().count(),
+            total)
+
+        self.assertEqual(
+            Stream(
+                Stream(inputs).group(
+                    key=lambda item: sum(item)
+                    ).values()
+                ).concat().concat().sum(),
+            total)
