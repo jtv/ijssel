@@ -57,6 +57,8 @@ def bind_kwargs(function, kwargs=None):
     :return: A callable.
     """
     if kwargs is None or kwargs == {}:
+        # Optimisation: Instead of binding kwargs every time our result is
+        # called, just let the call go straight to function.
         return function
     else:
         return lambda *args: function(*args, **kwargs)
