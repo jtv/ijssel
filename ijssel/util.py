@@ -20,9 +20,10 @@ __all__ = [
 import itertools
 from sys import version_info
 
+python_version = version_info[0]
 
 # Guaranteed-lazy versions of various iteration helpers.
-if version_info.major >= 3:
+if python_version >= 3:
     ifilter = filter
     ifilterfalse = itertools.filterfalse
     imap = map
@@ -33,7 +34,7 @@ else:
 
 
 # The integer type(s).  Python 2 has two, Python 3 just one.
-if version_info.major >= 3:
+if python_version >= 3:
     int_types = (int, )
 else:
     int_types = (int, long)
