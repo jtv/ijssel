@@ -102,6 +102,53 @@ stream, the item goes through the stages in your chain from left to right.
 Then all of the same steps happen for the next item in the stream, and so on.
 
 
+### Transforming each item in a stream
+
+Call a stream's `map` with any callable that takes an item, and you get a new
+stream where each of the original stream's items is replaced with the result
+of your callable:
+
+    double = lambda x: 2 * x
+    assert Stream(range(3)).map(double).list() == [0, 2, 4]
+
+The transformation is still "lazy," so `double` isn't actually executed until
+you ask for the `.list()`.
+
+If you use your own Stream subclass, the result will be a new instance of
+your subclass.
+
+
+### Transforming a stream
+
+Call a stream's `apply` to run the entire stream through a function which
+returns a new iterable, and then wrap that result in a new stream:
+
+    stream = Stream(range(3))
+    sorted_stream = stream.apply(sorted, {'reverse': True})
+    assert isinstance(sorted_stream, Stream)
+    assert sorted_stream.list() == [2, 1, 0]
+
+The `sorted` built-in reads the whole stream, and returns a list.  The `apply`
+call wraps this in a new stream.
+
+If you use your own Stream subclass, the result will be a new instance of
+your subclass.
+
+
+### Feeding your stream into a callable
+
+You can pass your stream's contents into a function, a lambda, constructor, or
+any other kind of callable, and get its result, call `into`.  This is just
+like calling your callable and passing the stream's iterable as an argument,
+but in a more "fluent" notation:
+
+    assert Stream(range(3)).into(list) == list(Stream(range(3)))
+
+In fact, the `list` method is a convenience shorthand for this call:
+
+    assert Stream(range(3)).list() == Stream(range(3)).into(list)
+
+
 Differences from Java streams
 -----------------------------
 
@@ -152,12 +199,12 @@ Use standard Python slicing!
 
 Instead of `stream.skip(10)`, say `stream[10:]`.  Instead of `stream.limit(5)`,
 say `stream[:5]`.  And instead of `stream.skip(10).limit(5)`, say
-`stream[5:15]`.
+`stream[10:15]`.
 
 Of course these return streams, so if you just want a list with those
 elements, call `list`:
 
-    stream[5:15].list()
+    stream[10:15].list()
 
 
 ### concat
