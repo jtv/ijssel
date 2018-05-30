@@ -34,9 +34,9 @@ Of course you can also iterate an IJssel stream just like any other sequence:
 That means that you can normally use an IJssel stream wherever you can use an
 iterable.
 
-Streams iterate lazily.  It won't process any items until you ask for them.
-So an infinite stream will work just fine, so long as you don't ask for all of
-its items.
+Streams iterate lazily.  A stream won't process a single item until you ask for
+one.  An infinite stream will work just fine, so long as you don't try to read
+all of its items.
 
 
 Name
@@ -50,7 +50,8 @@ And you saw that right: _IJssel,_ not _Ijssel._  The "IJ" is basically the
 Dutch version of "Y", so think _Yssel._  If you pronounce it Ice-sel you'll be
 close enough.
 
-Unicode also has a ligature for that combo: Ĳssel.  It's 5 characters, not 6.
+Unicode also has that combo as a single character: Ĳssel.  That's only
+five characters, not the six you'd expect.
 
 
 Platform
@@ -97,9 +98,30 @@ number of elements, and so on.  Those things can't be done without processing
 items from the stream.  Until you call a terminal operation, you're just
 setting up operations but not triggering them yet.
 
-As a terminal operation at the "back" of your chain pulls an item from the
-stream, the item goes through the stages in your chain from left to right.
-Then all of the same steps happen for the next item in the stream, and so on.
+
+### Processing steps
+
+So things start to happen once you invoke a terminal operation at the "back"
+of your chain.  How does that go?
+
+First, it pulls an item from your original iterable.  The item travels through
+the stages of your chain, from left to right.  Each stage in the chain can
+perform some transformation on the item, delivering the resulting item to the
+next stage.
+
+Some stage in the chain, such as as "filter" call, may decide to drop the item
+from its output stream.  If that happens, the item is not enough to give the
+terminal operation at the back the item that it asked for.  So the chain goes
+back to the beginning, pulling another item from your original iterable, and
+running it through the stages.  It keeps doing this until it can deliver a
+processed item, or until the iterable runs out.
+
+Assuming the iterable didn't run out, a processed item comes out of the chain,
+and gets consumed by the terminal operation.
+
+Next, the whole thing is repeated for the next item, and so on until either the
+iterable runs out or the operation at the back of the chain stops asking for
+more items.
 
 
 ### Transforming each item in a stream
@@ -221,7 +243,7 @@ To concatenate two or more streams, just add them!
 
 IJssel's `empty` tests whether a stream is empty.
 
-To get an empty stream, just create it without argument: `Stream()`.
+To get an empty stream, just create it without an argument: `Stream()`.
 
 
 ### generate
