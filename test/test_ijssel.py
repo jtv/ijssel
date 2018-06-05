@@ -879,6 +879,11 @@ class TestSort(TestCase):
         Stream(inputs).sort(kwargs_recorder(args), kwargs={'x': arg}).drain()
         self.assertEqual(args, [{'x': arg}] * len(inputs))
 
+    def test_sorts_in_reverse_order_if_requested(self):
+        self.assertEqual(
+            Stream([2, 1, 3]).sort(reverse=True).list(),
+            [3, 2, 1])
+
 
 def count_items(sequence):
     """Return number of items in sequence."""

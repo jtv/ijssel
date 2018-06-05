@@ -379,6 +379,9 @@ class Stream:
         If `key` returns the same value for two or more consecutive items
         in the stream, the resulting stream will only contain the first of
         those items.  The other items with the same key are filtered out.
+
+        *Non-consecutive* items with the same key are *not* filtered out.
+        So, `Stream([1, 2, 1]).uniq().list()` still equals `[1, 2, 1]`.
         """
         return self.apply(uniq, {'key': bind_kwargs(key, kwargs)})
 
@@ -416,7 +419,7 @@ class Stream:
         """
         return os.path.join(*self)
 
-    def sort(self, key=identity, kwargs=None):
+    def sort(self, key=identity, kwargs=None, reverse=False):
         """Return a sorted version of this stream.
 
         Reads all items into memory, sorts them, and returns a new Stream
@@ -427,4 +430,9 @@ class Stream:
         :param key: Compute key by which elements should be sorted.
         :return: Stream.
         """
-        return self.apply(sorted, {'key': bind_kwargs(key, kwargs)})
+        return self.apply(
+            sorted,
+            {
+                'key': bind_kwargs(key, kwargs),
+                'reverse': reverse,
+            })
