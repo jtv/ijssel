@@ -634,6 +634,14 @@ class TestConcat(TestCase):
     def test_concatenates_strings(self):
         self.assertEqual(Stream(['xy', 'z']).concat().list(), ['x', 'y', 'z'])
 
+    def test_accepts_long_streams(self):
+        # Until Python 3.7, function invocations were limited to 255 arguments.
+        # Make sure this is not an issue when concatenating large numbers of
+        # iterables.
+        self.assertEqual(
+            Stream([x] for x in range(500)).concat().list(),
+            [x for x in range(500)])
+
     def test_iterates_lazily(self):
         iterations = []
         Stream(generate([range(3)], iterations)).concat()
