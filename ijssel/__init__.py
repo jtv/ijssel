@@ -6,11 +6,13 @@ from __future__ import (
     unicode_literals,
     )
 
+from .exceptions import NotIterable
 from .main import Stream
 from .util import identity
 
 __all__ = [
     'identity',
+    'NotIterable',
     'Stream',
     ]
 
