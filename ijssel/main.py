@@ -88,6 +88,8 @@ class Stream:
             classes derived from it.
         :raises NotIterable: If `iterable` is not actually an iterable.
         """
+        super(Stream, self).__init__()
+
         # We don't actually use based_on yet.  But having it in the base class
         # will make it easier for derived classes to pass additional
         # attributes down chained streams.
