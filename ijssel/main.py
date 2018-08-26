@@ -66,11 +66,13 @@ class Stream:
     Sometimes a terminal operation doesn't really consume all items in the
     stream.  It may stop if a function you passed raises an exception.  Or
     sometimes the operation can simply complete early.  For example, the `all`
-    method can stop as soon as it hits a False item.
+    method can stop as soon as it hits a False item, because at that point it's
+    no longer possible for the method to return True.
 
     Many methods take both a function and a "kwargs" as parameters.  That's
-    shorthand for parameter binding.  To avoid confusion when it comes to
-    positional arguments, it binds only keyword arguments.
+    shorthand for parameter binding: "call this function, with these keyword
+    arguments."  To avoid confusion when it comes to positional arguments, it
+    binds only keyword arguments.
 
     The kwargs trick can save you some hard-to-read antics.  For instance, if
     you have a sequence of lists and you want to sort them all in reverse
@@ -111,9 +113,11 @@ class Stream:
         return self.iterator
 
     def __getitem__(self, index):
-        """Index or slice a stream.
+        """Index or slice a stream.  Negative indexes are not supported.
 
-        Indexing retrieves a single item.  This is a terminal operation.
+        Indexing retrieves a single item.  This is a terminal operation.  It
+        leaves the stream at the position just behind the element you
+        retrieved.
 
         Slicing limits the stream to a subset.  This is nonterminal.
 
@@ -360,7 +364,7 @@ class Stream:
         return self.map(handle)
 
     def take_while(self, criterion=identity, kwargs=None):
-        """Stop iterating when `criterion(item)` is false.
+        """Iterate items until `criterion(item)` returns false.
 
         :return: Stream.
         """
@@ -401,8 +405,8 @@ class Stream:
 
         Shorthand for `self.reduce((lambda l, r: l + r), initial)`.
 
-        Try not to use this on strings.  For that special case, `join` will be
-        faster.
+        Try not to use this on strings.  For that special case, `string_join`
+        will be faster.
 
         If you're adding floating-point numbers and precision is important to
         your application, simply summing numbers in an arbitrary order may not
@@ -413,7 +417,8 @@ class Stream:
         may not show up in the result.  For more accurate results you may need
         to sort the numbers in ascending order first, so that the smaller
         numbers build up into a larger one before it gets added to the huge
-        number.
+        number.  (That's just an example; there are probably more precise, but
+        costlier, algorithms than that.)
 
         Terminal.
 
