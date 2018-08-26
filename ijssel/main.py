@@ -20,6 +20,7 @@ from itertools import (
     )
 import os.path
 
+from .exceptions import NotIterable
 from .util import (
     bind_kwargs,
     identity,
@@ -27,6 +28,7 @@ from .util import (
     ifilterfalse,
     imap,
     int_types,
+    text_type,
     uniq,
     )
 
@@ -84,14 +86,19 @@ class Stream:
         :param based_on: Optional original stream on which the new one is
             based.  Normally only used from within the `Stream` class, or in
             classes derived from it.
+        :raises NotIterable: If `iterable` is not actually an iterable.
         """
         # We don't actually use based_on yet.  But having it in the base class
         # will make it easier for derived classes to pass additional
         # attributes down chained streams.
         self.iterable = iterable
+        try:
+            self.iterator = iter(iterable)
+        except TypeError as e:
+            raise NotIterable(text_type(e))
 
     def __iter__(self):
-        return iter(self.iterable)
+        return self.iterator
 
     def __getitem__(self, index):
         """Index or slice a stream.

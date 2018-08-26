@@ -14,6 +14,7 @@ __all__ = [
     'ifilterfalse',
     'imap',
     'int_types',
+    'text_type',
     'uniq',
     ]
 
@@ -21,6 +22,14 @@ import itertools
 from sys import version_info
 
 python_version = version_info[0]
+
+
+# The Unicode string type, similar to six.text_type.
+if python_version >= 3:
+    text_type = str
+else:
+    text_type = unicode
+
 
 # Guaranteed-lazy versions of various iteration helpers.
 if python_version >= 3:

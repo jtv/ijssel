@@ -17,6 +17,7 @@ from textwrap import dedent
 from unittest import TestCase
 
 from ..ijssel import Stream
+from ..ijssel.exceptions import NotIterable
 from ..ijssel.util import identity
 
 
@@ -103,6 +104,12 @@ class TestIteration(TestCase):
     def test_defaults_to_empty_stream(self):
         self.assertEqual(list(Stream()), [])
 
+    def test_requires_iterable_or_None(self):
+        self.assertRaises(NotIterable, Stream, None)
+        self.assertRaises(NotIterable, Stream, 10)
+        self.assertRaises(NotIterable, Stream, 0.1)
+        self.assertRaises(NotIterable, Stream, int)
+
     def test_iterates_sequence(self):
         n = randint(1, 10)
 
@@ -114,10 +121,6 @@ class TestIteration(TestCase):
 
     def test_iterates_range(self):
         self.assertEqual(list(Stream(range(3))), [0, 1, 2])
-
-    def test_does_not_iterate_non_sequence(self):
-        self.assertRaises(TypeError, list, Stream(None))
-        self.assertRaises(TypeError, list, Stream(10))
 
     def test_lazy(self):
         iterations = []
