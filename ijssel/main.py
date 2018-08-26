@@ -137,7 +137,7 @@ class Stream:
         stream class from `Stream`, you may need to override it to pass more
         information from the "original" stream to the "evolved" one.
         """
-        return type(self)(iterable)
+        return type(self)(iterable, based_on=self)
 
     def into(self, callee, kwargs=None):
         """Invoke `callee` on the stream's iterable as a whole, return result.
