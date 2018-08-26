@@ -12,10 +12,13 @@ from io import StringIO
 from itertools import count
 from operator import methodcaller
 import os.path
-from random import randint
 from textwrap import dedent
 from unittest import TestCase
 
+from .factory import (
+    make_list,
+    make_num,
+    )
 from ..ijssel import Stream
 from ..ijssel.exceptions import NotIterable
 from ..ijssel.util import identity
@@ -87,7 +90,7 @@ def fail_item(item):
 class TestIteration(TestCase):
     """Tests for basic iteration."""
     def test_iterates_container(self):
-        n = randint(1, 10)
+        n = make_num(1)
         self.assertEqual(list(Stream(range(n))), list(range(n)))
         self.assertEqual(list(Stream(list(range(n)))), list(range(n)))
         self.assertEqual(list(Stream(tuple(range(n)))), list(range(n)))
@@ -111,7 +114,7 @@ class TestIteration(TestCase):
         self.assertRaises(NotIterable, Stream, int)
 
     def test_iterates_sequence(self):
-        n = randint(1, 10)
+        n = make_num(1)
 
         def generate():
             for item in range(n):
@@ -138,22 +141,29 @@ class TestIteration(TestCase):
         self.assertEqual(iterations, [0, 1, 2, 3, 4])
 
 
+class TestNext(TestCase):
+    """Tests for `next` iteration."""
+    def test_gets_next_item(self):
+        original = make_list()
+        stream = Stream(original)
+        self.assertEqual([next(stream) for _ in original], original)
+
+
 class TestGetItemIndex(TestCase):
     """Tests for `__getitem__` (when passing an index)."""
     def test_returns_item_from_stream(self):
-        items = [4, 3, 2, 1, 0]
-        self.assertEqual(Stream(items)[0], 4)
-        self.assertEqual(Stream(items)[1], 3)
-        self.assertEqual(Stream(items)[3], 1)
-        self.assertEqual(Stream(items)[4], 0)
+        items = make_list()
+        self.assertEqual(
+            [Stream(items)[index] for index, _ in enumerate(items)],
+            items)
 
     def test_works_on_generator(self):
         def iterate(inputs):
             for item in inputs:
                 yield item
 
-        inputs = [randint(0, 10) for _ in range(1, 10)]
-        index = randint(0, len(inputs) - 1)
+        inputs = make_list()
+        index = make_num(max=(len(inputs) - 1))
 
         self.assertEqual(
             Stream(iterate(inputs))[index],
@@ -251,7 +261,7 @@ class TestAdd(TestCase):
 class TestApply(TestCase):
     """Tests for `apply`."""
     def test_returns_stream(self):
-        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        inputs = make_list()
         self.assertTrue(isinstance(Stream(inputs).apply(list), Stream))
 
     def test_applies_function_to_iterable(self):
@@ -271,7 +281,7 @@ class TestList(TestCase):
         self.assertEqual(Stream(range(3)).list(), [0, 1, 2])
 
     def test_turns_generator_into_list(self):
-        item = randint(0, 10)
+        item = make_num()
 
         def iterate():
             yield item
@@ -285,7 +295,7 @@ class TestCount(TestCase):
         self.assertEqual(Stream().count(), 0)
 
     def test_counts_items(self):
-        values = [randint(0, 10) for _ in range(randint(0, 5))]
+        values = make_list()
         self.assertEqual(Stream(values).count(), len(values))
 
     def test_counts_even_false_items(self):
@@ -323,13 +333,13 @@ class TestForEach(TestCase):
 
     def test_calls_function_on_each_item(self):
         processed = []
-        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        inputs = make_list()
         Stream(inputs).for_each(recorder(processed))
         self.assertEqual(processed, inputs)
 
     def test_adds_kwargs(self):
         args = []
-        n = randint(1, 3)
+        n = make_num(1, 3)
         Stream(range(n)).for_each(
             kwargs_recorder(args), kwargs={'kwarg': 'foo'})
         self.assertEqual(args, [{'kwarg': 'foo'}] * n)
@@ -348,7 +358,7 @@ class TestDrain(TestCase):
     """Tests for `drain`."""
     def test_consumes_all_items(self):
         iterations = []
-        inputs = [randint(0, 10) for _ in range(randint(1, 5))]
+        inputs = make_list()
         Stream(generate(inputs, iterations)).drain()
         self.assertEqual(iterations, inputs)
 
@@ -376,7 +386,7 @@ class TestFilter(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        arg = randint(0, 10)
+        arg = make_num()
         criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
@@ -420,7 +430,7 @@ class TestFilterOut(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        arg = randint(0, 10)
+        arg = make_num()
         criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
@@ -513,8 +523,8 @@ class TestStarMap(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        arg = randint(0, 10)
-        inputs = [[randint(0, 10)] for _ in range(randint(1, 10))]
+        arg = make_num()
+        inputs = make_list(of=lambda: make_list(min=1, max=1))
         stream = Stream(inputs)
         stream.starmap(kwargs_recorder(args), kwargs={'guh': arg}).drain()
         self.assertEqual(args, [{'guh': arg}] * len(inputs))
@@ -540,8 +550,8 @@ class TestCatch(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        arg = randint(0, 10)
-        inputs = range(randint(1, 10))
+        arg = make_num()
+        inputs = range(make_num())
         Stream(inputs).catch(kwargs_recorder(args), kwargs={'Q': arg}).drain()
         self.assertEqual(args, [{'Q': arg}] * len(inputs))
 
@@ -606,8 +616,8 @@ class TestTakeWhile(TestCase):
     def test_adds_kwargs(self):
         args = []
         check = kwargs_recorder(args, lambda item: True)
-        arg = randint(0, 10)
-        length = randint(1, 5)
+        arg = make_num()
+        length = make_num()
         Stream(range(length)).take_while(check, kwargs={'kwarg': arg}).drain()
         self.assertEqual(args, [{'kwarg': arg}] * length)
 
@@ -692,7 +702,7 @@ class TestGroup(TestCase):
             })
 
     def test_adds_key_kwargs(self):
-        factor = randint(1, 10)
+        factor = make_num(1)
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
@@ -704,7 +714,7 @@ class TestGroup(TestCase):
             })
 
     def test_computes_value(self):
-        factor = randint(1, 10)
+        factor = make_num(1)
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
@@ -719,7 +729,7 @@ class TestGroup(TestCase):
 class TestSum(TestCase):
     """Tests for `sum`."""
     def test_returns_initial_if_empty(self):
-        initial = randint(0, 10)
+        initial = make_num()
         self.assertEqual(Stream().sum(initial), initial)
 
     def test_sums_numbers(self):
@@ -735,15 +745,15 @@ class TestSum(TestCase):
 class TestReduce(TestCase):
     """Tests for `reduce`."""
     def test_defaults_to_initial_value(self):
-        initial = randint(0, 10)
+        initial = make_num()
         multiply = lambda l, r: l * r
         self.assertEqual(
             Stream().reduce(multiply, initial),
             initial)
 
     def test_combines_initial_value_with_single_item(self):
-        initial = randint(1, 10)
-        value = randint(1, 10)
+        initial = make_num()
+        value = make_num()
         multiply = lambda l, r: l * r
         self.assertEqual(
             Stream([value]).reduce(multiply, initial),
@@ -756,7 +766,7 @@ class TestReduce(TestCase):
             10)
 
     def test_combines_initial_value_with_series(self):
-        initial = randint(2, 10)
+        initial = make_num(2)
         multiply = lambda l, r: l * r
         self.assertEqual(
             Stream([1, 2, 3]).reduce(multiply, initial),
@@ -791,8 +801,8 @@ class TestUniq(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        inputs = [randint(0, 10) for _ in range(10)]
-        arg = randint(0, 10)
+        inputs = make_list()
+        arg = make_num()
         Stream(inputs).uniq(kwargs_recorder(args), kwargs={'n': arg}).drain()
         self.assertEqual(args, [{'n': arg}] * len(inputs))
 
@@ -805,7 +815,7 @@ class TestPeek(TestCase):
         self.assertEqual(processed, [0, 1, 2])
 
     def test_passes_items_on_unchanged(self):
-        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        inputs = make_list()
         peeked = []
         self.assertEqual(
             Stream(inputs).peek(recorder(peeked)).list(),
@@ -820,8 +830,8 @@ class TestPeek(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        length = randint(1, 10)
-        foo = randint(0, 10)
+        length = make_num()
+        foo = make_num()
         Stream(range(length)).peek(kwargs_recorder(args), {'foo': foo}).drain()
         self.assertEqual(args, [{'foo': foo}] * length)
 
@@ -885,8 +895,8 @@ class TestSort(TestCase):
 
     def test_adds_kwargs(self):
         args = []
-        arg = randint(0, 10)
-        inputs = [randint(0, 10) for _ in range(randint(1, 10))]
+        arg = make_num()
+        inputs = make_list()
         Stream(inputs).sort(kwargs_recorder(args), kwargs={'x': arg}).drain()
         self.assertEqual(args, [{'x': arg}] * len(inputs))
 

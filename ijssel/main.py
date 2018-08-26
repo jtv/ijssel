@@ -130,6 +130,19 @@ class Stream:
         """Combine self and other iterable into a single stream."""
         return self.evolve(chain(self.iterable, iterable))
 
+    def __next__(self):
+        """Consume next item, and return it; or raise StopIteration."""
+        return next(self.iterator)
+
+    def next(self):
+        """Consume next item, and return it; or raise StopIteration.
+
+        You wouldn't normally call this directly; it's here to support the
+        built-in `next` function in Python 2.  Instead of `stream.next()`,
+        call `next(stream)`.
+        """
+        return self.__next__()
+
     def evolve(self, iterable):
         """Create a new instance based on the current one.
 
