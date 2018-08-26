@@ -18,7 +18,7 @@ But some people prefer it more like:
     big_counts = (
         Stream(items)
         .map(count)
-        .filter(greater_than, {'threshold': 3})
+        .keep_if(greater_than, {'threshold': 3})
         .list()
         )
 
@@ -109,7 +109,7 @@ the stages of your chain, from left to right.  Each stage in the chain can
 perform some transformation on the item, delivering the resulting item to the
 next stage.
 
-Some stage in the chain, such as as "filter" call, may decide to drop the item
+Some stage in the chain, such as a `drop_if`, may decide to drop the item
 from its output stream.  If that happens, the item is not enough to give the
 terminal operation at the back the item that it asked for.  So the chain goes
 back to the beginning, pulling another item from your original iterable, and

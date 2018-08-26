@@ -51,7 +51,7 @@ class Stream:
     You can even have infinite streams, such as one that generates digits of Pi
     on demand.
 
-    It also means that you can't just call e.g. `map` or `filter` with a
+    It also means that you can't just call e.g. `map` or `keep_if` with a
     function that does something, and expect it to operate on all your items.
     Your function only gets called as an item is actually read from the stream.
     There's a `drain` method for "go through all items now."
@@ -255,21 +255,45 @@ class Stream:
         for _ in self.iterator:
             pass
 
-    def filter(self, criterion=identity, kwargs=None):
-        """Drop any items for which criterion(item) is not true.
+    def keep_if(self, criterion=identity, kwargs=None):
+        """Filter, keeping only items for which criterion(item) is true.
 
-        :return: Stream.
+        This matches the `filter` built-in.  There's also a `filter` method
+        which does the same thing, under a more traditional name.  We believe
+        `keep_if` avoids confusion about whether it's the matching or the
+        non-matching elements which get eliminated.
         """
         return self.evolve(
             ifilter(bind_kwargs(criterion, kwargs), self.iterator))
 
-    def filter_out(self, criterion=identity, kwargs=None):
+    def filter(self, criterion=identity, kwargs=None):
+        """Drop any items for which criterion(item) is not true.
+
+        This matches the `filter` built-in.  Another, clearer name for the
+        same operation is `keep_if`.
+
+        :return: Stream.
+        """
+        return self.keep_if(criterion, kwargs)
+
+    def drop_if(self, criterion=identity, kwargs=None):
         """Drop any items for which criterion(item) is true.
+
+        This is the opposite of `keep_if`.  It removes the matching elements.
 
         :return: Stream.
         """
         return self.evolve(
             ifilterfalse(bind_kwargs(criterion, kwargs), self.iterator))
+
+    def filter_out(self, criterion=identity, kwargs=None):
+        """Drop any items for which criterion(item) is true.
+
+        This is an obsolete alias for `drop_if`.  Please use `drop_if` instead.
+
+        :return: Stream.
+        """
+        return self.drop_if(criterion, kwargs)
 
     def map(self, function, kwargs=None):
         """Transform stream: apply function to each item.
@@ -403,9 +427,9 @@ class Stream:
     def uniq(self, key=identity, kwargs=None):
         """Filter out any consecutive items with equal `key(item)`.
 
-        If `key` returns the same value for two or more consecutive items
+        If `key` returns the same value for two or more _consecutive_ items
         in the stream, the resulting stream will only contain the first of
-        those items.  The other items with the same key are filtered out.
+        those items.  The other items with the same key are dropped.
 
         *Non-consecutive* items with the same key are *not* filtered out.
         So, `Stream([1, 2, 1]).uniq().list()` still equals `[1, 2, 1]`.

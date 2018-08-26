@@ -371,25 +371,25 @@ class TestDrain(TestCase):
         self.assertEqual(iterations, inputs)
 
 
-class TestFilter(TestCase):
-    """Tests for `filter`."""
+class TestKeepIf(TestCase):
+    """Tests for `keep_if`."""
     def test_filters_on_identity_by_default(self):
         # Some values that alternately evaluate as "true" and "false".
         values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0']
         # You only get the "true" ones.
         self.assertEqual(
-            Stream(values).filter().list(),
+            Stream(values).keep_if().list(),
             [item for item in values if item])
 
     def test_filters_on_criterion(self):
         even = lambda item: item % 2 == 0
         self.assertEqual(
-            Stream([0, 1, 2, 3, 4]).filter(even).list(),
+            Stream([0, 1, 2, 3, 4]).keep_if(even).list(),
             [0, 2, 4])
 
     def test_lazy(self):
         iterations = []
-        Stream(generate(range(5), iterations)).filter()
+        Stream(generate(range(5), iterations)).keep_if()
         self.assertEqual(iterations, [])
 
     def test_adds_kwargs(self):
@@ -398,7 +398,7 @@ class TestFilter(TestCase):
         criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
-        result = stream.filter(criterion, kwargs={'kwarg': arg}).list()
+        result = stream.keep_if(criterion, kwargs={'kwarg': arg}).list()
 
         self.assertEqual(result, [4])
         self.assertEqual(args, [{'kwarg': arg}] * length)
@@ -410,30 +410,30 @@ class TestFilter(TestCase):
         stream = Stream(generate([1, 2, 3, 4, 5], iterations))
         self.assertRaises(
             ZeroDivisionError,
-            stream.filter(criterion).drain)
+            stream.keep_if(criterion).drain)
         self.assertEqual(iterations, [1, 2, 3])
         self.assertEqual(stream.list(), [4, 5])
 
 
-class TestFilterOut(TestCase):
-    """Tests for `filter_out`."""
+class TestDropIf(TestCase):
+    """Tests for `drop_if`."""
     def test_filters_on_identity_by_default(self):
         # Some values that alternately evaluate as "true" and "false".
         values = [True, False, 0, 1, [], [0], {}, {0: 0}, '', '0']
         # You only get the "false" ones.
         self.assertEqual(
-            Stream(values).filter_out().list(),
+            Stream(values).drop_if().list(),
             [item for item in values if not item])
 
     def test_filters_on_criterion(self):
         even = lambda item: item % 2 == 0
         self.assertEqual(
-            Stream([0, 1, 2, 3, 4]).filter_out(even).list(),
+            Stream([0, 1, 2, 3, 4]).drop_if(even).list(),
             [1, 3])
 
     def test_lazy(self):
         iterations = []
-        Stream(generate(range(5), iterations)).filter_out()
+        Stream(generate(range(5), iterations)).drop_if()
         self.assertEqual(iterations, [])
 
     def test_adds_kwargs(self):
@@ -442,7 +442,7 @@ class TestFilterOut(TestCase):
         criterion = kwargs_recorder(args, lambda item: item > 3)
         length = 5
         stream = Stream(range(length))
-        result = stream.filter_out(criterion, kwargs={'kwarg': arg}).list()
+        result = stream.drop_if(criterion, kwargs={'kwarg': arg}).list()
 
         self.assertEqual(result, [0, 1, 2, 3])
         self.assertEqual(args, [{'kwarg': arg}] * length)
@@ -454,7 +454,7 @@ class TestFilterOut(TestCase):
         stream = Stream(generate([1, 2, 3, 4, 5], iterations))
         self.assertRaises(
             ZeroDivisionError,
-            stream.filter_out(criterion).drain)
+            stream.drop_if(criterion).drain)
         self.assertEqual(iterations, [1, 2, 3])
         self.assertEqual(stream.list(), [4, 5])
 
@@ -934,7 +934,7 @@ class TestIntegrate(TestCase):
                 [0, 1],
                 ])
             .map(count_items)
-            .filter(greater_than, {'threshold': 3})
+            .keep_if(greater_than, {'threshold': 3})
             .list()
             )
         self.assertEqual(long_items, [4, 5])
@@ -942,7 +942,7 @@ class TestIntegrate(TestCase):
     def test_sum_even_numbers(self):
         is_even = lambda number: number % 2 == 0
         self.assertEqual(
-            Stream(range(13)).filter(is_even).sum(),
+            Stream(range(13)).keep_if(is_even).sum(),
             42)
 
     def test_sort_uniq_count(self):
