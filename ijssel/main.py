@@ -336,6 +336,29 @@ class Stream:
 
         return self.map(handle)
 
+    def catch_map(self, function, kwargs=None):
+        """Run `function(item)` for each item; yield exception/result pair.
+
+        Yields each result as a tuple.  Either the first element is an
+        exception raised by the call, or the second is the function's return
+        value.
+
+        Only handles exceptions derived from `Exception`.  Any other errors
+        break the iteration.
+
+        :return: Stream.
+        """
+        if kwargs is None:
+            kwargs = {}
+
+        def handle(item):
+            try:
+                return None, function(item, **kwargs)
+            except Exception as error:
+                return error, None
+
+        return self.map(handle)
+
     def take_while(self, criterion=identity, kwargs=None):
         """Stop iterating when `criterion(item)` is false.
 

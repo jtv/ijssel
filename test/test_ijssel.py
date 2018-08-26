@@ -594,6 +594,67 @@ class TestCatch(TestCase):
             [type(None), SimulatedFailure, type(None), ValueError])
 
 
+class TestCatchMap(TestCase):
+    """Tests for `catch_map`."""
+    def test_yields_None_and_result(self):
+        self.assertEqual(
+            Stream([1, 2]).catch_map(identity).list(),
+            [(None, 1), (None, 2)])
+
+    def test_yields_exception_and_None(self):
+        output = Stream([1]).catch_map(fail_item).list()
+        self.assertEqual(len(output), 1)
+        [(exception, result)] = output
+        self.assertEqual(type(exception), SimulatedFailure)
+        self.assertIsNone(result)
+
+    def test_lazy(self):
+        iterations = []
+        Stream(generate(range(5), iterations)).catch_map(identity)
+        self.assertEqual(iterations, [])
+
+    def test_adds_kwargs(self):
+        args = []
+        arg = make_num()
+        inputs = range(make_num())
+        recorder = kwargs_recorder(args)
+        Stream(inputs).catch_map(recorder, kwargs={'Q': arg}).drain()
+        self.assertEqual(args, [{'Q': arg}] * len(inputs))
+
+    def test_propagates_unexpected_exception(self):
+        class FatalFail(BaseException):
+            """Simulated error, not derived from Exception."""
+
+        def kaboom(item):
+            raise FatalFail("Awful simulated error.")
+
+        self.assertRaises(FatalFail, Stream([1]).catch_map(kaboom).drain)
+
+    def test_continues_after_exception(self):
+        result = Stream([1, 2]).catch_map(fail_item).list()
+        self.assertEqual(len(result), 2)
+        [fail1, fail2] = result
+        self.assertEqual(type(fail1[0]), SimulatedFailure)
+        self.assertEqual(type(fail2[0]), SimulatedFailure)
+
+    def test_handles_mixed_exceptions_and_successes(self):
+        def iffy(item):
+            if item % 2 == 0:
+                return item
+            elif item == 1:
+                raise SimulatedFailure("It's a one.")
+            else:
+                raise ValueError("Some other error.")
+
+        result = Stream([0, 1, 2, 3]).catch_map(iffy).list()
+        self.assertEqual(result[0], (None, 0))
+        self.assertEqual(type(result[1][0]), SimulatedFailure)
+        self.assertIsNone(result[1][1])
+        self.assertEqual(result[2], (None, 2))
+        self.assertEqual(type(result[3][0]), ValueError)
+        self.assertIsNone(result[3][1])
+
+
 class TestTakeWhile(TestCase):
     """Tests for `while_true`."""
     def test_stops_when_condition_no_longer_met(self):
