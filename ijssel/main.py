@@ -95,7 +95,11 @@ class Stream:
         # We really only use out iterator, but we keep a reference to the
         # original.  Gavin Panella mentions that it looks as if the iterable
         # can get prematurely garbage-collected otherwise.
+        # (The real underlying iterable may be several steps of iterator
+        # construction up the based_on chain, so keep the entire chain.)
+        self.based_on = based_on
         self.iterable = iterable
+
         try:
             self.iterator = iter(iterable)
         except TypeError as e:
