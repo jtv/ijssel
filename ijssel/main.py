@@ -91,6 +91,10 @@ class Stream:
         # We don't actually use based_on yet.  But having it in the base class
         # will make it easier for derived classes to pass additional
         # attributes down chained streams.
+
+        # We really only use out iterator, but we keep a reference to the
+        # original.  Gavin Panella mentions that it looks as if the iterable
+        # can get prematurely garbage-collected otherwise.
         self.iterable = iterable
         try:
             self.iterator = iter(iterable)
@@ -116,11 +120,11 @@ class Stream:
         """
         if isinstance(index, slice):
             start, stop, step = index.start, index.stop, index.step
-            return self.evolve(islice(self.iterable, start, stop, step))
+            return self.evolve(islice(self.iterator, start, stop, step))
         elif isinstance(index, int_types):
             if index < 0:
                 raise IndexError("Negative index not supported: %d." % index)
-            element_slice = islice(self.iterable, index, index + 1)
+            element_slice = islice(self.iterator, index, index + 1)
             return tuple(element_slice)[0]
         else:
             raise TypeError(
@@ -128,7 +132,7 @@ class Stream:
 
     def __add__(self, iterable):
         """Combine self and other iterable into a single stream."""
-        return self.evolve(chain(self.iterable, iterable))
+        return self.evolve(chain(self.iterator, iterable))
 
     def __next__(self):
         """Consume next item, and return it; or raise StopIteration."""
@@ -166,7 +170,7 @@ class Stream:
         :return: Whatever callee returns.
         """
         call = bind_kwargs(callee, kwargs)
-        return call(self.iterable)
+        return call(self.iterator)
 
     def apply(self, callee, kwargs=None):
         """Apply callee to iterable, wrap result as new stream.
@@ -212,10 +216,7 @@ class Stream:
 
         :return: int.
         """
-        total = 0
-        for _ in self.iterable:
-            total += 1
-        return total
+        return sum(1 for _ in self)
 
     def empty(self):
         """Is the stream empty?
@@ -235,7 +236,7 @@ class Stream:
         Terminal.
         """
         call = bind_kwargs(function, kwargs)
-        for item in self.iterable:
+        for item in self.iterator:
             call(item)
 
     def drain(self):
@@ -245,7 +246,7 @@ class Stream:
 
         Terminal.
         """
-        for _ in self.iterable:
+        for _ in self.iterator:
             pass
 
     def filter(self, criterion=identity, kwargs=None):
@@ -254,7 +255,7 @@ class Stream:
         :return: Stream.
         """
         return self.evolve(
-            ifilter(bind_kwargs(criterion, kwargs), self.iterable))
+            ifilter(bind_kwargs(criterion, kwargs), self.iterator))
 
     def filter_out(self, criterion=identity, kwargs=None):
         """Drop any items for which criterion(item) is true.
@@ -262,14 +263,14 @@ class Stream:
         :return: Stream.
         """
         return self.evolve(
-            ifilterfalse(bind_kwargs(criterion, kwargs), self.iterable))
+            ifilterfalse(bind_kwargs(criterion, kwargs), self.iterator))
 
     def map(self, function, kwargs=None):
         """Transform stream: apply function to each item.
 
         :return: Stream.
         """
-        return self.evolve(imap(bind_kwargs(function, kwargs), self.iterable))
+        return self.evolve(imap(bind_kwargs(function, kwargs), self.iterator))
 
     def starmap(self, function, kwargs=None):
         """Like map, but each item is a series of arguments.
@@ -280,7 +281,7 @@ class Stream:
         :return: Stream.
         """
         return self.evolve(
-            starmap(bind_kwargs(function, kwargs), self.iterable))
+            starmap(bind_kwargs(function, kwargs), self.iterator))
 
     def catch(self, function, kwargs=None):
         """Iterate exceptions raised by `function(item)` for each item.
@@ -311,7 +312,7 @@ class Stream:
         :return: Stream.
         """
         return self.evolve(
-            takewhile(bind_kwargs(criterion, kwargs), self.iterable))
+            takewhile(bind_kwargs(criterion, kwargs), self.iterator))
 
     def concat(self):
         """Items are themselves sequences.  Iterate them all combined.
@@ -340,7 +341,7 @@ class Stream:
         key_call = bind_kwargs(key, key_kwargs)
         value_call = bind_kwargs(value, val_kwargs)
         groups = {}
-        for item in self.iterable:
+        for item in self.iterator:
             item_key = key_call(item)
             item_value = value_call(item)
             groups.setdefault(item_key, [])
@@ -391,7 +392,7 @@ class Stream:
             items.
         """
         return functools.reduce(
-            bind_kwargs(function, kwargs), self.iterable, initial)
+            bind_kwargs(function, kwargs), self.iterator, initial)
 
     def uniq(self, key=identity, kwargs=None):
         """Filter out any consecutive items with equal `key(item)`.
