@@ -148,6 +148,14 @@ class TestNext(TestCase):
         stream = Stream(original)
         self.assertEqual([next(stream) for _ in original], original)
 
+    def test_ends_with_StopIteration(self):
+        items = make_list()
+        stream = Stream(items)
+        for _ in items:
+            next(stream)
+
+        self.assertRaises(StopIteration, next, stream)
+
 
 class TestGetItemIndex(TestCase):
     """Tests for `__getitem__` (when passing an index)."""
