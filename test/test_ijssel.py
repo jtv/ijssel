@@ -740,7 +740,7 @@ class TestGroup(TestCase):
             Stream(range(3)).group(),
             {0: [0], 1: [1], 2: [2]})
 
-    def test_groups_by_key_result(self):
+    def test_groups_by_computed_key(self):
         half = lambda number: int(number / 2)
         self.assertEqual(
             Stream(range(3)).group(key=half),
@@ -770,28 +770,16 @@ class TestGroup(TestCase):
                 False: [1, 3, 5],
             })
 
-    def test_adds_key_kwargs(self):
+    def test_adds_kwargs(self):
         factor = make_num(1)
         multiply = lambda item, factor: item * factor
         stream = Stream(range(3))
         self.assertEqual(
-            stream.group(key=multiply, key_kwargs={'factor': factor}),
+            stream.group(key=multiply, kwargs={'factor': factor}),
             {
                 0: [0],
                 1 * factor: [1],
                 2 * factor: [2],
-            })
-
-    def test_computes_value(self):
-        factor = make_num(1)
-        multiply = lambda item, factor: item * factor
-        stream = Stream(range(3))
-        self.assertEqual(
-            stream.group(value=multiply, val_kwargs={'factor': factor}),
-            {
-                0: [0],
-                1: [factor],
-                2: [2 * factor],
             })
 
 

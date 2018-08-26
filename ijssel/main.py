@@ -374,13 +374,11 @@ class Stream:
         """
         return self.apply(chain.from_iterable)
 
-    def group(self, key=identity, key_kwargs=None, value=identity,
-              val_kwargs=None):
+    def group(self, key=identity, kwargs=None):
         """Map items into a dict of lists.
 
-        For each item, computes a key as key(item) and a value as value(item).
-        Returns a dict mapping each key to the list of values computed from
-        the items which had that key.
+        For each item, computes a key as key(item).  Returns a dict mapping
+        each key to the list of items which had that key value.
 
         Within each key's list, the values stay in the same order in which
         they occurred in the original stream.  If the same key/value pair
@@ -389,16 +387,13 @@ class Stream:
 
         Terminal.
 
-        :return: dict.
+        :return: dict of lists of items.
         """
-        key_call = bind_kwargs(key, key_kwargs)
-        value_call = bind_kwargs(value, val_kwargs)
+        compute_key = bind_kwargs(key, kwargs)
         groups = {}
         for item in self.iterator:
-            item_key = key_call(item)
-            item_value = value_call(item)
-            groups.setdefault(item_key, [])
-            groups[item_key].append(item_value)
+            item_key = compute_key(item)
+            groups.setdefault(item_key, []).append(item)
         return groups
 
     def sum(self, initial=0):
